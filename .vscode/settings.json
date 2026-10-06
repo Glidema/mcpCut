@@ -1,6 +1,7 @@
 {
   "explorer.excludeGitIgnore": false,
   "files.exclude": {
-    "**/.mcpcut": false
+    "**/.mcpcut": false,
+    "**/mcpcut-data": false
   }
 }

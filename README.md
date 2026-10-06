@@ -55,7 +55,7 @@ Premiere / 剪映 / CapCut 是给人点的。`ffmpeg` 封装、脚本、n8n 工�
 | 语音 | 可选 `python3 -m whisper`（默认模型 `small`） | 旁路 SRT，不进渲染图 |
 | 任务 | 本地 jobs 目录 | `queued → running → done / error` |
 
-工作根目录是 `MCPCUT_ROOT`（默认仓库下 `.mcpcut/`）。该目录 **gitignore，不会进 GitHub**；工作区已打开「显示被 ignore 的文件」，资源管理器里应能看见成片和 `project.json`。
+工作根目录是 `MCPCUT_ROOT`（默认仓库下可见的 `mcpcut-data/`）。该目录 **gitignore，不会进 GitHub**。用 Finder 打开仓库即可看到工程、成片、SRT。
 
 ---
 
@@ -88,7 +88,7 @@ npm run typecheck
       ],
       "cwd": "/ABS/PATH/mcpCut",
       "env": {
-        "MCPCUT_ROOT": "/ABS/PATH/mcpCut/.mcpcut"
+        "MCPCUT_ROOT": "/ABS/PATH/mcpCut/mcpcut-data"
       }
     }
   }
@@ -124,7 +124,7 @@ Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时�
 
 成片在：
 
-`.mcpcut/projects/<projectId>/renders/`
+`mcpcut-data/projects/<projectId>/renders/`
 
 中间版本在 `versions/`，预览图在 `previews/`，转写在 `transcripts/`，切点在 `scenes/`。
 
@@ -136,7 +136,7 @@ Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时�
 
 - **先 `describe_project`，再改。** 摘要里有 `clipId`、`v_*`、`t_*`、总时长。不要猜 id。
 - **先 preview 再 render。** 编码慢；两张切点帧往往比空转一次出片更能发现「剪错段了」。
-- **原片只读。** 所有破坏性操作都发生在 `.mcpcut/projects/...`。源 MP4 应始终不变。
+- **原片只读。** 所有破坏性操作都发生在 `mcpcut-data/projects/...`。源 MP4 应始终不变。
 - **智能结果要人（或 Agent）确认。** 场景切点在 MV 上会很碎（0.3 阈值下几十刀都正常）；Whisper 在纯配乐上可能只听出片头「字幕by某某」。用切点当建议，再用 `edit_timeline` 下手。
 - **口播先 cut_highlights，再 preview。** `strategy=hybrid`：说话够多就切气口；MV/B-roll 会退回场景镜头。想先看刀再下手：`apply=false`。切错了 `restore_version`。
 - **改了 MCP 工具或参数就要 Reload。** 只剪同一工程、不升级服务时，不必反复重启。

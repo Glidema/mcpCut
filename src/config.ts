@@ -12,7 +12,7 @@ const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 export function resolveRoot(): string {
   const fromEnv = process.env.MCPCUT_ROOT?.trim();
   if (fromEnv) return fromEnv;
-  return `${process.cwd()}/.mcpcut`;
+  return `${process.cwd()}/mcpcut-data`;
 }
 
 function bundled(pathOrNull: string | null | undefined): string | undefined {

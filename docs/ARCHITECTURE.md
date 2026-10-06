@@ -13,10 +13,10 @@ MCP tools  →  project store (JSON + versions)  →  timeline math
 
 ## 工程目录
 
-`MCPCUT_ROOT`（默认 `./.mcpcut`）：
+`MCPCUT_ROOT`（默认 `./mcpcut-data`，不用点开头，Finder 里能看见）：
 
 ```
-.mcpcut/
+mcpcut-data/
   projects/
     <projectId>/
       project.json

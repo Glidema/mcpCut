@@ -8,7 +8,7 @@
       ],
       "cwd": "REPLACE_WITH_ABS_PATH/mcpCut",
       "env": {
-        "MCPCUT_ROOT": "REPLACE_WITH_ABS_PATH/mcpCut/.mcpcut"
+        "MCPCUT_ROOT": "REPLACE_WITH_ABS_PATH/mcpCut/mcpcut-data"
       }
     }
   }

@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "mcpcut": {
+    "mcpcut3": {
       "command": "/usr/local/bin/node",
       "args": [
         "/Users/maxiaoge/Documents/github/software/mcpCut/node_modules/tsx/dist/cli.mjs",

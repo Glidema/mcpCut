@@ -10,6 +10,7 @@ import { describeProject } from "./project/describe.js";
 import { timelineOpSchema } from "./project/schema.js";
 import { copyIntoMedia, createProject, loadProject, restoreVersion, saveProject } from "./project/store.js";
 import { applyOperations } from "./project/timeline.js";
+import { applyAudioOps, applyOverlayOps } from "./project/tracks.js";
 import { submitRender } from "./jobs/runner.js";
 import { loadJob } from "./jobs/store.js";
 import { nowIso, shortId } from "./util/ids.js";
@@ -26,7 +27,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut phase, workspace root, ffmpeg/ffprobe, and the full tool list. After a code change, if version is not 0.2.0 or phase is not 2, reload the MCP server.",
+        "Report mcpCut version and the tools this process actually registered. If version is not 0.3.1, reload Cursor MCP. New tool names need a new Agent chat after reload.",
       inputSchema: z.object({})
     },
     async () => {
@@ -48,7 +49,9 @@ export function createServer(): McpServer {
             "describe_project",
             "render",
             "get_job",
-            "restore_version"
+            "restore_version",
+            "add_overlay",
+            "mix_audio"
           ]
         });
       } catch (err) {
@@ -112,7 +115,7 @@ export function createServer(): McpServer {
     "import_clip",
     {
       description:
-        "Copy a local media file into the project media/ folder, probe it, and return clipId. Does not place it on the timeline; follow with edit_timeline add_video.",
+        "Copy a local media file into the project media/ folder, probe it, and return clipId. Video, audio, and image files are accepted. Audio clips are for mix_audio BGM. Does not place the clip on the timeline.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         path: z.string().min(1).describe("Local file to copy into the project")
@@ -309,6 +312,67 @@ export function createServer(): McpServer {
           revision: project.revision,
           restoredFrom: revision,
           video: project.tracks.video
+        });
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "add_overlay",
+    {
+      description:
+        "Burn a text overlay onto the timeline (title, subtitle, or caption). Times are timeline seconds. One overlay per call. Does not render; call render afterwards.",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        text: z.string().min(1).max(200).describe("Overlay copy"),
+        start: z.number().nonnegative().describe("Timeline start seconds"),
+        end: z.number().positive().describe("Timeline end seconds"),
+        style: z.enum(["title", "subtitle", "caption"]).optional()
+      })
+    },
+    async ({ projectId, text, start, end, style }) => {
+      try {
+        const project = await loadProject(projectId);
+        const saved = await saveProject(
+          applyOverlayOps(project, [{ op: "add_text", text, start, end, style }])
+        );
+        return ok(describeProject(saved), {
+          projectId: saved.id,
+          revision: saved.revision,
+          text: saved.tracks.text
+        });
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "mix_audio",
+    {
+      description:
+        "Mix a BGM clip under the video. import_clip the audio file first, then pass its clipId. volume default 0.25. Does not render; call render afterwards.",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        clipId: z.string().min(1),
+        volume: z.number().min(0).max(4).optional(),
+        fadeIn: z.number().nonnegative().optional(),
+        fadeOut: z.number().nonnegative().optional(),
+        start: z.number().nonnegative().optional()
+      })
+    },
+    async ({ projectId, clipId, volume, fadeIn, fadeOut, start }) => {
+      try {
+        const project = await loadProject(projectId);
+        const saved = await saveProject(
+          applyAudioOps(project, [{ op: "add_audio", clipId, volume, fadeIn, fadeOut, start }])
+        );
+        return ok(describeProject(saved), {
+          projectId: saved.id,
+          revision: saved.revision,
+          audio: saved.tracks.audio
         });
       } catch (err) {
         return fail(err);

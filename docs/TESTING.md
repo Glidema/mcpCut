@@ -1,47 +1,30 @@
 # 一起测试
 
-每期只跑对应清单。样片：`vivi/mcbb.MP4`（不入库）。
+样片：`vivi/mcbb.MP4`。工程：`mcbb-agent-e109c692df40`。
 
-## 环境
+原片不会被改写。改代码后必须 **Reload MCP**；`get_status` 的 version / phase 对不上就还是旧进程。
 
-```bash
-npm test
-npm run typecheck
-npm run smoke:phase1 -- vivi/mcbb.MP4
-```
+## Phase 1–2（已通过）
 
-工程目录：`.mcpcut/projects/`。原片 `vivi/mcbb.MP4` 不会被改写。
+剪辑时间线并 `render` → `get_job` done。成片示例：`renders/rev-0007.mp4`。
 
-## Phase 1（已通过）
+## Phase 3（当前）
 
-Agent 调 MCP：inspect → create → import → 两段 0–3s / 5–8s → trim → reorder → preview → remove。产物是 `project.json`、`media/` 副本、`previews/*.jpg`。
+先 Reload MCP。配置里的服务名是 **mcpcut3**（为打破 Cursor 工具目录缓存）。`get_status` 应为 **version 0.3.1、phase 3**，工具列表须能直接看到 `add_overlay`。旧对话请丢掉，**新开 Agent 对话**：
 
-## Phase 2（当前）
-
-脚本：
-
-```bash
-npm run smoke:phase2 -- mcbb-agent-e109c692df40
-```
-
-Cursor：Reload MCP 后新开对话：
+新开对话：
 
 ```
 请只用 mcpcut MCP。工程 mcbb-agent-e109c692df40：
-1. describe_project
-2. 若只剩 1.5s 一段，restore_version 回到两段版（rev 5）
-3. render
-4. 轮询 get_job 直到 done
-5. 给出成片路径；不要改 vivi/mcbb.MP4
+1. get_status（确认 version 0.3.0 / phase 3）
+2. describe_project
+3. add_overlay 加一条 title：0–2s，文案「mcpCut 测试」
+4. 再加一条 caption：2–4.5s，文案「5–8秒 + 开场1.5秒」
+5. describe_project
+6. render → 轮询 get_job
+7. 给出成片路径；不要改 vivi/mcbb.MP4
 ```
 
-期望：`renders/rev-XXXX.mp4` 可播放，时长约 4.5s（恢复到两段后）或 1.5s（不恢复）。`vivi/mcbb.MP4` 仍是约 60s。
+有配乐文件时再测：`import_clip` mp3 → `mix_audio` add_audio volume=0.2 fadeIn=0.3 → render。
 
-## 反馈格式
-
-```
-步骤: render
-期望: get_job done，renders 下有 mp4
-实际: ...
-阻塞?: 是/否
-```
+期望：成片能看见标题和底部说明；无 BGM 时原视频音轨仍在。

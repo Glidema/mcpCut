@@ -100,11 +100,31 @@
 
 恢复后 revision +1，旧快照保留。
 
+### add_overlay
+
+一次加一条字幕（扁平参数，便于 Cursor 识别）。
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `projectId` | 是 | |
+| `text` | 是 | 最多 200 字 |
+| `start` / `end` | 是 | 时间线秒 |
+| `style` | 否 | `title` \| `subtitle` \| `caption`，默认 caption |
+
+### mix_audio
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `projectId` | 是 | |
+| `clipId` | 是 | 先 `import_clip` |
+| `volume` | 否 | 默认 0.25 |
+| `fadeIn` / `fadeOut` / `start` | 否 | |
+
 ## 以后才注册
 
 | 工具 | 期 |
 | --- | --- |
-| `add_overlay` / 字幕 | 3 |
-| `mix_audio` | 3 |
+| 画中画 / 水印 | 4 |
+| Whisper 自动字幕 | 5 |
 
 未实现的工具 **不注册**，避免模型调用到占位符。

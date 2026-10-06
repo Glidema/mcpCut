@@ -50,4 +50,16 @@ describe("render plan", () => {
     empty.tracks.video = [];
     assert.throws(() => buildRenderPlan(empty));
   });
+
+  it("burns text and mixes extra audio", () => {
+    const p = project();
+    p.tracks.text = [{ id: "t1", start: 0, end: 1, text: "Hi", style: "title" }];
+    p.tracks.audio = [
+      { id: "a1", clipId: "clip_a", in: 0, out: 2, start: 0, volume: 0.2 }
+    ];
+    const plan = buildRenderPlan(p);
+    assert.match(plan.filter, /drawtext=/);
+    assert.match(plan.filter, /amix=inputs=2/);
+    assert.equal(plan.inputs.length, 3);
+  });
 });

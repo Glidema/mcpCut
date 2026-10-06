@@ -97,3 +97,65 @@ export const timelineOpSchema = z.discriminatedUnion("op", [
 ]);
 
 export type TimelineOp = z.infer<typeof timelineOpSchema>;
+
+export const addTextOpSchema = z.object({
+  op: z.literal("add_text"),
+  text: z.string().min(1).max(200),
+  start: z.number().nonnegative(),
+  end: z.number().positive(),
+  style: z.enum(["title", "subtitle", "caption"]).optional()
+});
+
+export const updateTextOpSchema = z.object({
+  op: z.literal("update_text"),
+  itemId: z.string(),
+  text: z.string().min(1).max(200).optional(),
+  start: z.number().nonnegative().optional(),
+  end: z.number().positive().optional(),
+  style: z.enum(["title", "subtitle", "caption"]).optional()
+});
+
+export const removeOverlayOpSchema = z.object({
+  op: z.literal("remove_overlay"),
+  itemId: z.string()
+});
+
+export const overlayOpSchema = z.discriminatedUnion("op", [
+  addTextOpSchema,
+  updateTextOpSchema,
+  removeOverlayOpSchema
+]);
+
+export type OverlayOp = z.infer<typeof overlayOpSchema>;
+
+export const addAudioOpSchema = z.object({
+  op: z.literal("add_audio"),
+  clipId: z.string(),
+  in: z.number().nonnegative().optional(),
+  out: z.number().positive().optional(),
+  start: z.number().nonnegative().optional(),
+  volume: z.number().min(0).max(4).optional(),
+  fadeIn: z.number().nonnegative().optional(),
+  fadeOut: z.number().nonnegative().optional()
+});
+
+export const setVolumeOpSchema = z.object({
+  op: z.literal("set_volume"),
+  itemId: z.string(),
+  volume: z.number().min(0).max(4),
+  fadeIn: z.number().nonnegative().optional(),
+  fadeOut: z.number().nonnegative().optional()
+});
+
+export const removeAudioOpSchema = z.object({
+  op: z.literal("remove_audio"),
+  itemId: z.string()
+});
+
+export const audioOpSchema = z.discriminatedUnion("op", [
+  addAudioOpSchema,
+  setVolumeOpSchema,
+  removeAudioOpSchema
+]);
+
+export type AudioOp = z.infer<typeof audioOpSchema>;

@@ -2,6 +2,8 @@ import path from "node:path";
 import type { Project } from "../types/project.js";
 import { mediaAbsPath, projectDir } from "../project/store.js";
 import { clipDuration, findClip } from "../project/timeline.js";
+import { audioDuration } from "../project/tracks.js";
+import { drawtextFilter, resolveFontFile } from "./text.js";
 
 export interface RenderPlan {
   inputs: string[];
@@ -43,8 +45,53 @@ export function buildRenderPlan(project: Project): RenderPlan {
 
   const concatIn = project.tracks.video.map((_, i) => `[v${i}][a${i}]`).join("");
   parts.push(`${concatIn}concat=n=${project.tracks.video.length}:v=1:a=1[outv][outa]`);
-  const filter = parts.join(";");
 
+  let videoLabel = "outv";
+  if (project.tracks.text.length > 0) {
+    const font = resolveFontFile();
+    project.tracks.text.forEach((item, i) => {
+      const src = i === 0 ? "outv" : `tx${i - 1}`;
+      const dest = i === project.tracks.text.length - 1 ? "vout" : `tx${i}`;
+      parts.push(`[${src}]${drawtextFilter(item, font)}[${dest}]`);
+    });
+    videoLabel = "vout";
+  }
+
+  const videoInputCount = project.tracks.video.length;
+  project.tracks.audio.forEach((item) => {
+    const clip = findClip(project, item.clipId);
+    inputs.push(mediaAbsPath(project, clip.relPath));
+  });
+
+  let audioLabel = "outa";
+  if (project.tracks.audio.length > 0) {
+    const mixParts = ["[outa]"];
+    project.tracks.audio.forEach((item, i) => {
+      const inputIndex = videoInputCount + i;
+      const dur = audioDuration(item);
+      const fadeIn = item.fadeIn ?? 0;
+      const fadeOut = item.fadeOut ?? 0;
+      const delayMs = Math.round(item.start * 1000);
+      let chain =
+        `[${inputIndex}:a]atrim=start=${item.in}:end=${item.out},asetpts=PTS-STARTPTS,` +
+        `volume=${item.volume}`;
+      if (fadeIn > 0) chain += `,afade=t=in:st=0:d=${fadeIn}`;
+      if (fadeOut > 0) {
+        const fadeAt = Math.max(0, dur - fadeOut);
+        chain += `,afade=t=out:st=${fadeAt}:d=${fadeOut}`;
+      }
+      if (delayMs > 0) chain += `,adelay=${delayMs}|${delayMs}`;
+      chain += `,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[bgm${i}]`;
+      parts.push(chain);
+      mixParts.push(`[bgm${i}]`);
+    });
+    parts.push(
+      `${mixParts.join("")}amix=inputs=${mixParts.length}:duration=first:dropout_transition=0:normalize=0[aout]`
+    );
+    audioLabel = "aout";
+  }
+
+  const filter = parts.join(";");
   const output = path.join(
     projectDir(project.id),
     "renders",
@@ -52,16 +99,14 @@ export function buildRenderPlan(project: Project): RenderPlan {
   );
 
   const args = ["-y"];
-  for (const input of inputs) {
-    args.push("-i", input);
-  }
+  for (const input of inputs) args.push("-i", input);
   args.push(
     "-filter_complex",
     filter,
     "-map",
-    "[outv]",
+    `[${videoLabel}]`,
     "-map",
-    "[outa]",
+    `[${audioLabel}]`,
     "-c:v",
     "libx264",
     "-preset",

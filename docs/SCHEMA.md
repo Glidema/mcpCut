@@ -14,8 +14,8 @@
 | `spec` | object | 目标成片规格 |
 | `media` | array | 已导入素材 |
 | `tracks.video` | array | 唯一视频轨 |
-| `tracks.audio` | array | Phase 3，Phase 1 保持 `[]` |
-| `tracks.text` | array | Phase 3，Phase 1 保持 `[]` |
+| `tracks.audio` | array | BGM 等额外音轨，可与视频重叠 |
+| `tracks.text` | array | 烧录字幕/标题 |
 
 ## spec
 
@@ -55,6 +55,26 @@ Phase 1 只记录 spec，预览抽帧不强制缩放。
 | `start` | 时间线上的起点，由 pack 重算 |
 
 轨时长 = 最后一项 `start + (out - in)`。不允许重叠或空隙（Phase 1）。
+
+## tracks.text[]
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | `t_*` |
+| `start` / `end` | 时间线秒 |
+| `text` | 最多 200 字 |
+| `style` | `title` \| `subtitle` \| `caption` |
+
+## tracks.audio[]
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | `a_*` |
+| `clipId` | 已导入素材（audio 或带音轨的 video） |
+| `in` / `out` | 源入出点 |
+| `start` | 时间线上何时开始 |
+| `volume` | 线性增益，BGM 默认 0.25 |
+| `fadeIn` / `fadeOut` | 可选秒数 |
 
 ## 版本快照
 

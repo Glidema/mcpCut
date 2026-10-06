@@ -1,7 +1,7 @@
 import type { Project } from "../types/project.js";
 import { clipDuration, timelineDuration } from "./timeline.js";
 
-export function describeProject(project: Project): string {
+export function describeProject(project: Project, notes: string[] = []): string {
   const total = timelineDuration(project);
   const lines = [
     `Project ${project.name} (${project.id}) rev ${project.revision}`,
@@ -41,6 +41,10 @@ export function describeProject(project: Project): string {
           `@ ${item.start.toFixed(2)}s vol=${item.volume}`
       );
     });
+  }
+
+  if (notes.length > 0) {
+    lines.push(...notes);
   }
 
   return lines.join("\n");

@@ -59,6 +59,12 @@ describe("overlay and audio tracks", () => {
     assert.equal(project.tracks.audio[0].start, 0);
   });
 
+  it("defaults mix_audio out to the timeline length", () => {
+    const project = applyAudioOps(sample(), [{ op: "add_audio", clipId: "clip_bgm" }]);
+    assert.equal(project.tracks.audio[0].in, 0);
+    assert.equal(project.tracks.audio[0].out, 4);
+  });
+
   it("rejects text with end <= start", () => {
     assert.throws(() =>
       applyOverlayOps(sample(), [{ op: "add_text", text: "x", start: 2, end: 1 }])

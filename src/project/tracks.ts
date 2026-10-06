@@ -49,13 +49,18 @@ export function applyAudioOps(project: Project, operations: AudioOp[]): Project 
         throw new Error(`Clip ${clip.id} has no audio`);
       }
       const inPoint = op.in ?? 0;
-      const outPoint = op.out ?? clip.durationSec;
-      if (outPoint == null) {
-        throw new Error(`Clip ${clip.id} has unknown duration; pass explicit in/out`);
-      }
-      validateRange(clip, inPoint, outPoint);
       const start = op.start ?? 0;
       if (start < 0) throw new Error("audio start must be >= 0");
+      let outPoint = op.out;
+      if (outPoint == null) {
+        const clipRemain = clip.durationSec;
+        if (clipRemain == null) {
+          throw new Error(`Clip ${clip.id} has unknown duration; pass explicit in/out`);
+        }
+        const needed = videoDur > 0 ? Math.max(0.05, videoDur - start) : clipRemain - inPoint;
+        outPoint = inPoint + Math.min(needed, clipRemain - inPoint);
+      }
+      validateRange(clip, inPoint, outPoint);
       audio.push({
         id: shortId("a"),
         clipId: clip.id,

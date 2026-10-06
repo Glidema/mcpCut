@@ -3,8 +3,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PHASE = 5;
-export const PACKAGE_VERSION = "0.5.0";
+export const PHASE = 6;
+export const PACKAGE_VERSION = "0.6.0";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");

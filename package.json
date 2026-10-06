@@ -1,7 +1,7 @@
 {
   "name": "mcpcut",
-  "version": "0.1.0",
-  "description": "Agent-callable MCP video editor: inspect, timeline, preview, then render.",
+  "version": "0.6.0",
+  "description": "Agent-callable MCP video editor: declarative timeline, preview, async render.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

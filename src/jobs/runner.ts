@@ -7,6 +7,7 @@ import { runCommand } from "../engine/process.js";
 import { formatSrt, parseWhisperJson, type CaptionCue } from "../engine/srt.js";
 import { defaultWhisperHint, runWhisper, whisperAvailable } from "../engine/whisper.js";
 import { loadProject, projectDir } from "../project/store.js";
+import { timelineDuration } from "../project/timeline.js";
 import { createJob, loadJob, patchJob, type Job } from "./store.js";
 import { formatError } from "../tools/respond.js";
 import { ensureDir } from "../util/fs.js";
@@ -56,19 +57,25 @@ async function runTranscribe(jobId: string): Promise<void> {
     const rev = `rev-${String(project.revision).padStart(4, "0")}`;
     const srtPath = path.join(projectDir(project.id), "transcripts", `${rev}.srt`);
     await writeFile(srtPath, formatSrt(cues), "utf8");
+    const timelineSec = timelineDuration(project);
     await patchJob(jobId, {
       status: "done",
       outputPath: srtPath,
       cues: cues.slice(0, 40),
-      summary: captionSummary(cues)
+      summary: captionSummary(cues, timelineSec)
     });
   } catch (err) {
     await patchJob(jobId, { status: "error", error: formatError(err) });
   }
 }
 
-function captionSummary(cues: CaptionCue[]): string {
+function captionSummary(cues: CaptionCue[], timelineSec = 0): string {
   if (cues.length === 0) return "(no speech)";
+  const speech = cues.reduce((sum, cue) => sum + Math.max(0, cue.end - cue.start), 0);
+  const ratio = timelineSec > 0 ? speech / timelineSec : 1;
   const text = cues.map((cue) => cue.text).join(" ");
-  return text.length > 400 ? `${text.slice(0, 397)}...` : text;
+  const clipped = text.length > 320 ? `${text.slice(0, 317)}...` : text;
+  const head = `${cues.length} cue(s), speech ${speech.toFixed(1)}s / ${timelineSec.toFixed(1)}s`;
+  const note = ratio < 0.15 ? " little speech (likely music or watermark)." : "";
+  return `${head}.${note} ${clipped}`.trim();
 }

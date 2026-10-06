@@ -26,6 +26,7 @@ MCP tools  →  project store (JSON + versions)  →  timeline math
       previews/
       renders/        # phase 2
       transcripts/    # phase 5 sidecar SRT
+      scenes/         # phase 6 sidecar JSON
 ```
 
 素材导入时 **复制** 进 `media/`，时间线只引用工程内相对路径。这样工程可搬、Agent 也不会死盯用户桌面的原路径。

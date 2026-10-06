@@ -22,8 +22,10 @@
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
 | `path` | 是 | 本地绝对或相对路径 |
+| `scenes` | 否 | `true` 时探测硬切点（较慢） |
+| `sceneThreshold` | 否 | 0.1–0.9，默认 0.3 |
 
-调用 ffprobe。不导入工程。失败时说明缺二进制或文件不可读。
+调用 ffprobe。`scenes` 为旁路摘要，不导入、不改工程。
 
 ### import_clip
 
@@ -60,8 +62,10 @@
 | --- | --- | --- |
 | `projectId` | 是 | |
 | `maxFrames` | 否 | 默认 6，最大 12 |
+| `at` | 否 | `mid`（默认）或 `scenes` |
+| `sceneThreshold` | 否 | 仅 `at=scenes` |
 
-为每个视频项抽 1 张中点帧（项多时截断到 maxFrames）。返回 JPEG 路径，并尽量附带 image content 给支持视觉的客户端。
+`mid`：每段中点一帧。`scenes`：按硬切点抽样，并写 `scenes/rev-XXXX.json`。返回 JPEG 路径，并尽量附带 image content。
 
 空时间线应明确报错，而不是空成功。
 
@@ -124,6 +128,8 @@
 | `volume` | 否 | 默认 0.25 |
 | `fadeIn` / `fadeOut` / `start` | 否 | |
 
+省略 `in`/`out` 时只覆盖剩余时间线，不用整段源时长。
+
 ### transcribe
 
 | 参数 | 必填 | 说明 |
@@ -131,12 +137,6 @@
 | `projectId` | 是 | |
 | `language` | 否 | 如 `Chinese`；省略则自动检测 |
 
-立刻返回 `{ jobId }`。`get_job` 成功时 `outputPath` 为 sidecar SRT。不改 `project.json`。需要 `python3 -m whisper`（或 `WHISPER_BIN`），默认模型 `small`（`WHISPER_MODEL`）。
-
-## 以后才注册
-
-| 工具 | 期 |
-| --- | --- |
-| 场景探测 | 以后 |
+立刻返回 `{ jobId }`。`get_job` 成功时 `outputPath` 为 sidecar SRT。不改 `project.json`。需要 `python3 -m whisper`（或 `WHISPER_BIN`），默认模型 `small`（`WHISPER_MODEL`）。summary 含语音时长；口播很少会标明。
 
 未实现的工具 **不注册**，避免模型调用到占位符。

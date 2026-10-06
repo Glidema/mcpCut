@@ -5,10 +5,11 @@ import * as z from "zod/v4";
 import { PACKAGE_VERSION, PHASE, resolveRoot, whisperModel } from "./config.js";
 import { previewProject as extractPreview } from "./engine/preview.js";
 import { formatProbe, probeMedia } from "./engine/ffprobe.js";
+import { detectScenes, formatSceneReport } from "./engine/scenes.js";
 import { engineStatus } from "./engine/status.js";
 import { describeProject } from "./project/describe.js";
 import { timelineOpSchema } from "./project/schema.js";
-import { copyIntoMedia, createProject, loadProject, restoreVersion, saveProject } from "./project/store.js";
+import { copyIntoMedia, createProject, loadProject, projectDir, restoreVersion, saveProject } from "./project/store.js";
 import { applyOperations } from "./project/timeline.js";
 import { applyAudioOps, applyOverlayOps } from "./project/tracks.js";
 import { submitRender, submitTranscribe } from "./jobs/runner.js";
@@ -27,7 +28,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut version and registered tools. If version is not 0.5.0 / phase 5, reload MCP (mcpcut3) and start a new Agent chat.",
+        "Report mcpCut version and registered tools. If version is not 0.6.0 / phase 6, reload MCP (mcpcut3) and start a new Agent chat.",
       inputSchema: z.object({})
     },
     async () => {
@@ -95,19 +96,43 @@ export function createServer(): McpServer {
     "inspect_media",
     {
       description:
-        "Probe a local media file with ffprobe (duration, size, fps, audio). Does not add it to a project. Path must be a local file; URLs are not supported.",
+        "Probe a local media file with ffprobe (duration, size, fps, audio). Optional scenes=true runs FFmpeg scene-cut detection (sidecar; does not edit). Path must be a local file; URLs are not supported.",
       inputSchema: z.object({
-        path: z.string().min(1).describe("Absolute or cwd-relative path to a local media file")
+        path: z.string().min(1).describe("Absolute or cwd-relative path to a local media file"),
+        scenes: z.boolean().optional().describe("If true, also detect hard cuts (may take tens of seconds)"),
+        sceneThreshold: z
+          .number()
+          .min(0.1)
+          .max(0.9)
+          .optional()
+          .describe("Scene sensitivity 0.1–0.9; default 0.3. Higher = fewer cuts.")
       })
     },
-    async ({ path: mediaPath }) => {
+    async ({ path: mediaPath, scenes, sceneThreshold }) => {
       try {
         const resolved = path.resolve(mediaPath);
         if (!(await pathExists(resolved))) {
           return fail(new Error(`File not found: ${resolved}`));
         }
         const probe = await probeMedia(resolved);
-        return ok(formatProbe(resolved, probe), { path: resolved, ...probe });
+        let sceneReport = undefined;
+        let sceneLine = "";
+        if (scenes) {
+          if (probe.kind !== "video") {
+            sceneLine = " scenes skipped (not video)";
+          } else {
+            sceneReport = await detectScenes(resolved, {
+              threshold: sceneThreshold,
+              durationSec: probe.durationSec
+            });
+            sceneLine = ` ${formatSceneReport(sceneReport)}`;
+          }
+        }
+        return ok(`${formatProbe(resolved, probe)}${sceneLine}`, {
+          path: resolved,
+          ...probe,
+          scenes: sceneReport
+        });
       } catch (err) {
         return fail(err);
       }
@@ -199,7 +224,13 @@ export function createServer(): McpServer {
     async ({ projectId }) => {
       try {
         const project = await loadProject(projectId);
-        return ok(describeProject(project), {
+        const rev = String(project.revision).padStart(4, "0");
+        const notes: string[] = [];
+        const srt = path.join(projectDir(project.id), "transcripts", `rev-${rev}.srt`);
+        if (await pathExists(srt)) notes.push(`Sidecar transcript ${srt}`);
+        const sceneFile = path.join(projectDir(project.id), "scenes", `rev-${rev}.json`);
+        if (await pathExists(sceneFile)) notes.push(`Sidecar scenes ${sceneFile}`);
+        return ok(describeProject(project, notes), {
           projectId: project.id,
           revision: project.revision,
           spec: project.spec,
@@ -216,27 +247,33 @@ export function createServer(): McpServer {
     "preview_project",
     {
       description:
-        "Extract midpoint JPEG frames for video-track items (max 12). Requires ffmpeg. Empty timeline is an error. Does not export a finished video.",
+        "Extract JPEG frames from the video track (max 12). at=mid is one midpoint per item; at=scenes samples hard cuts (writes scenes/rev-XXXX.json sidecar, does not change the timeline). Empty timeline is an error. Does not export a finished video.",
       inputSchema: z.object({
         projectId: z.string().min(1),
-        maxFrames: z.number().int().min(1).max(12).optional()
+        maxFrames: z.number().int().min(1).max(12).optional(),
+        at: z.enum(["mid", "scenes"]).optional().describe("mid = clip midpoints (default); scenes = cut points"),
+        sceneThreshold: z.number().min(0.1).max(0.9).optional()
       })
     },
-    async ({ projectId, maxFrames }) => {
+    async ({ projectId, maxFrames, at, sceneThreshold }) => {
       try {
         const project = await loadProject(projectId);
-        const frames = await extractPreview(project, maxFrames ?? 6);
+        const frames = await extractPreview(project, {
+          maxFrames: maxFrames ?? 6,
+          at: at ?? "mid",
+          sceneThreshold
+        });
         const content: Array<
           | { type: "text"; text: string }
           | { type: "image"; data: string; mimeType: string }
         > = [
           {
             type: "text",
-            text: `Preview ${frames.length} frame(s) for ${project.id} rev ${project.revision}\n${frames
-              .map(
-                (f) =>
-                  `${f.itemId} @ source ${f.atSourceSec.toFixed(2)}s → ${f.file}`
-              )
+            text: `Preview ${frames.length} frame(s) for ${project.id} rev ${project.revision} at=${at ?? "mid"}\n${frames
+              .map((f) => {
+                const tl = f.timelineSec != null ? ` timeline ${f.timelineSec.toFixed(2)}s` : "";
+                return `${f.itemId} @ source ${f.atSourceSec.toFixed(2)}s${tl} → ${f.file}`;
+              })
               .join("\n")}`
           }
         ];
@@ -373,7 +410,7 @@ export function createServer(): McpServer {
     "mix_audio",
     {
       description:
-        "Mix a BGM clip under the video. import_clip the audio file first, then pass its clipId. volume default 0.25. Does not render; call render afterwards.",
+        "Mix a BGM clip under the video. import_clip the audio file first, then pass its clipId. volume default 0.25. Default in/out covers the remaining timeline, not the full source clip. Does not render; call render afterwards.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         clipId: z.string().min(1),
@@ -404,7 +441,7 @@ export function createServer(): McpServer {
     "transcribe",
     {
       description:
-        "Async speech-to-text of the current video track (not PIP). Writes a sidecar SRT under transcripts/; does not add overlays or change project.json. Poll get_job. Whisper must be available (python3 -m whisper).",
+        "Async speech-to-text of the current video track (not PIP). Writes a sidecar SRT under transcripts/; does not add overlays or change project.json. Poll get_job. Summary includes speech vs timeline duration. Whisper must be available (python3 -m whisper).",
       inputSchema: z.object({
         projectId: z.string().min(1),
         language: z

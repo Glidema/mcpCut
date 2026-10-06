@@ -29,7 +29,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut version and registered tools. If version is not 0.7.1 / phase 7, reload MCP (mcpcut3) and start a new Agent chat.",
+        "Report mcpCut version and registered tools. If version is not 0.7.2 / phase 7, reload MCP (mcpcut3) and start a new Agent chat.",
       inputSchema: z.object({})
     },
     async () => {

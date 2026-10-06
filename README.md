@@ -2,7 +2,7 @@
 
 给 **AI Agent** 用的本地视频剪辑器。你在 Cursor 里用自然语言说「把 20–26 秒和倒计时切在一起、加个水印、出一条 16:9」，Agent 调 MCP 工具完成；**你不会碰到时间线 UI，Agent 也不会手写 FFmpeg 命令**。
 
-当前版本：**0.7.1（Phase 7）** — 剪辑、字幕、BGM、画中画、多比例、Whisper、场景切点、精彩段自动切割。原片只读复制，导出走后台任务。
+当前版本：**0.7.2（Phase 7）** — 剪辑、字幕、BGM、画中画、多比例、Whisper、场景切点、精彩段自动切割。原片只读复制，导出走后台任务。
 
 ---
 
@@ -55,7 +55,7 @@ Premiere / 剪映 / CapCut 是给人点的。`ffmpeg` 封装、脚本、n8n 工�
 | 语音 | 可选 `python3 -m whisper`（默认模型 `small`） | 旁路 SRT，不进渲染图 |
 | 任务 | 本地 jobs 目录 | `queued → running → done / error` |
 
-没有云端账号、没有把成片传到别人服务器。工作根目录是 `MCPCUT_ROOT`（默认仓库下 `.mcpcut/`）。
+工作根目录是 `MCPCUT_ROOT`（默认仓库下 `.mcpcut/`）。该目录 **gitignore，不会进 GitHub**；工作区已打开「显示被 ignore 的文件」，资源管理器里应能看见成片和 `project.json`。
 
 ---
 
@@ -99,7 +99,7 @@ Whisper 默认模型是 `small`。若要换本机用的型号，在 `env` 里加
 
 Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时按对话缓存工具列表）。
 
-让 Agent 先调用 `get_status`。应看到版本 **0.7.1**、phase **7**、`ffmpeg: true`。`whisperModel` 应是你配置的值。对不上就 Reload + 新对话。
+让 Agent 先调用 `get_status`。应看到版本 **0.7.2**、phase **7**、`ffmpeg: true`。`whisperModel` 应是你配置的值。对不上就 Reload + 新对话。
 
 ### 3. 准备一条本地视频
 

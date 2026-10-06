@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PHASE = 7;
-export const PACKAGE_VERSION = "0.7.1";
+export const PACKAGE_VERSION = "0.7.2";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");

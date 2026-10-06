@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Local edit workspace (renders, media copies). Keep ignored so GitHub stays small;
+# the folder is still on disk — workspace settings show it in the explorer.
 .mcpcut/
 *.log
 .DS_Store

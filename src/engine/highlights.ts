@@ -123,7 +123,7 @@ export async function planHighlights(project: Project, opts: HighlightOptions = 
     }
   }
 
-  const kept = capHighlightClips(clips, maxClips);
+  const kept = evenPick(clips, maxClips);
   const keepSec = kept.reduce((sum, item) => sum + (item.out - item.in), 0);
   if (
     strategy === "hybrid" &&
@@ -141,7 +141,7 @@ export async function planHighlights(project: Project, opts: HighlightOptions = 
   const note =
     used === "speech"
       ? `Talking-head style: kept speech islands (${(speechDur / Math.max(windowSec, 0.01) * 100).toFixed(0)}% of window).`
-      : `Little speech (${(speechDur / Math.max(windowSec, 0.01) * 100).toFixed(0)}% of window); kept merged scene shots.`;
+      : `Little speech (${(speechDur / Math.max(windowSec, 0.01) * 100).toFixed(0)}% of window); kept ${kept.length} scene shot(s), dropped flashes/gaps.`;
 
   return {
     strategyUsed: used,
@@ -151,38 +151,6 @@ export async function planHighlights(project: Project, opts: HighlightOptions = 
     note,
     clips: kept
   };
-}
-
-function capHighlightClips(clips: HighlightClip[], maxClips: number): HighlightClip[] {
-  const next = clips.map((c) => ({ ...c }));
-  while (next.length > maxClips) {
-    let best = -1;
-    let bestDur = Infinity;
-    for (let i = 0; i < next.length - 1; i++) {
-      if (next[i].clipId !== next[i + 1].clipId) continue;
-      const combined = next[i + 1].out - next[i].in;
-      if (combined < bestDur) {
-        bestDur = combined;
-        best = i;
-      }
-    }
-    if (best < 0) {
-      let shortest = 0;
-      let dur = Infinity;
-      next.forEach((clip, i) => {
-        const d = clip.out - clip.in;
-        if (d < dur) {
-          dur = d;
-          shortest = i;
-        }
-      });
-      next.splice(shortest, 1);
-    } else {
-      next[best] = { ...next[best], out: next[best + 1].out };
-      next.splice(best + 1, 1);
-    }
-  }
-  return next;
 }
 
 /** Flatten a highlight plan into remove+add ops. PIP items are kept. */

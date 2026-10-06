@@ -17,7 +17,7 @@
 - `speech` / `scenes` 可强制
 - `scope=clip` 分析整段源；`selection` 只切当前 in/out
 - 默认 `apply=true`；`apply=false` 只出计划
-- `get_status` **0.7.1 / phase 7**。本机可用 `WHISPER_MODEL` 覆盖（默认仍为 `small`）
+- `get_status` **0.7.2 / phase 7**。本机可用 `WHISPER_MODEL` 覆盖（默认仍为 `small`）
 
 ## 以后可以做的切口（未开工）
 

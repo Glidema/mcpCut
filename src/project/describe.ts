@@ -15,6 +15,7 @@ export function describeProject(project: Project): string {
     lines.push(
       `  [${i}] ${item.id} clip=${item.clipId} src ${item.in.toFixed(2)}-${item.out.toFixed(2)}s ` +
         `→ timeline ${item.start.toFixed(2)}s (${clipDuration(item).toFixed(2)}s)` +
+        (item.layout === "pip" ? " PIP" : "") +
         (clip ? ` file=${clip.relPath}` : "")
     );
   });

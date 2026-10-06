@@ -3,6 +3,7 @@ import path from "node:path";
 import { resolveRoot } from "../config.js";
 import { ensureDir, pathExists } from "../util/fs.js";
 import { nowIso, shortId } from "../util/ids.js";
+import type { RenderOptions } from "../engine/render.js";
 
 export type JobStatus = "queued" | "running" | "done" | "error";
 
@@ -15,6 +16,7 @@ export interface Job {
   updatedAt: string;
   outputPath?: string;
   error?: string;
+  render?: RenderOptions;
 }
 
 function jobsDir(): string {
@@ -25,14 +27,15 @@ export function jobFile(jobId: string): string {
   return path.join(jobsDir(), `${jobId}.json`);
 }
 
-export async function createJob(projectId: string): Promise<Job> {
+export async function createJob(projectId: string, render?: RenderOptions): Promise<Job> {
   const job: Job = {
     id: shortId("job"),
     kind: "render",
     projectId,
     status: "queued",
     createdAt: nowIso(),
-    updatedAt: nowIso()
+    updatedAt: nowIso(),
+    render
   };
   await writeJob(job);
   return job;

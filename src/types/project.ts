@@ -28,6 +28,7 @@ export interface VideoItem {
   in: number;
   out: number;
   start: number;
+  layout?: "full" | "pip";
 }
 
 export interface AudioItem {
@@ -47,6 +48,7 @@ export interface TextItem {
   end: number;
   text: string;
   style: "title" | "subtitle" | "caption";
+  position?: "center" | "top" | "bottom" | "top-right";
 }
 
 export interface Project {

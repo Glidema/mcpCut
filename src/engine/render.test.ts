@@ -62,4 +62,25 @@ describe("render plan", () => {
     assert.match(plan.filter, /amix=inputs=2/);
     assert.equal(plan.inputs.length, 3);
   });
+
+  it("uses cover crop and 16:9 override", () => {
+    const plan = buildRenderPlan(project(), { aspect: "16:9", fit: "cover" });
+    assert.match(plan.filter, /force_original_aspect_ratio=increase/);
+    assert.match(plan.output, /16x9-cover/);
+  });
+
+  it("overlays pip without stretching timeline", () => {
+    const p = project();
+    p.tracks.video.push({
+      id: "pip1",
+      clipId: "clip_a",
+      in: 0,
+      out: 1,
+      start: 0.5,
+      layout: "pip"
+    });
+    const plan = buildRenderPlan(p);
+    assert.match(plan.filter, /overlay=/);
+    assert.match(plan.filter, /concat=n=2:v=1:a=1/);
+  });
 });

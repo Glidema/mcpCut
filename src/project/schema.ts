@@ -27,7 +27,8 @@ export const videoItemSchema = z.object({
   clipId: z.string(),
   in: z.number().nonnegative(),
   out: z.number().positive(),
-  start: z.number().nonnegative()
+  start: z.number().nonnegative(),
+  layout: z.enum(["full", "pip"]).optional()
 });
 
 export const audioItemSchema = z.object({
@@ -46,7 +47,8 @@ export const textItemSchema = z.object({
   start: z.number().nonnegative(),
   end: z.number().positive(),
   text: z.string(),
-  style: z.enum(["title", "subtitle", "caption"])
+  style: z.enum(["title", "subtitle", "caption"]),
+  position: z.enum(["center", "top", "bottom", "top-right"]).optional()
 });
 
 export const projectSchema = z.object({
@@ -69,7 +71,9 @@ export const addVideoOpSchema = z.object({
   op: z.literal("add_video"),
   clipId: z.string(),
   in: z.number().nonnegative().optional(),
-  out: z.number().positive().optional()
+  out: z.number().positive().optional(),
+  layout: z.enum(["full", "pip"]).optional(),
+  start: z.number().nonnegative().optional()
 });
 
 export const trimVideoOpSchema = z.object({
@@ -103,7 +107,8 @@ export const addTextOpSchema = z.object({
   text: z.string().min(1).max(200),
   start: z.number().nonnegative(),
   end: z.number().positive(),
-  style: z.enum(["title", "subtitle", "caption"]).optional()
+  style: z.enum(["title", "subtitle", "caption"]).optional(),
+  position: z.enum(["center", "top", "bottom", "top-right"]).optional()
 });
 
 export const updateTextOpSchema = z.object({

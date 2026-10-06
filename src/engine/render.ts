@@ -1,9 +1,17 @@
 import path from "node:path";
-import type { Project } from "../types/project.js";
+import type { AspectPreset, Project, ProjectSpec } from "../types/project.js";
+import { ASPECT_PRESETS } from "../types/project.js";
 import { mediaAbsPath, projectDir } from "../project/store.js";
-import { clipDuration, findClip } from "../project/timeline.js";
+import { clipDuration, findClip, isPip } from "../project/timeline.js";
 import { audioDuration } from "../project/tracks.js";
 import { drawtextFilter, resolveFontFile } from "./text.js";
+
+export type RenderFit = "contain" | "cover";
+
+export interface RenderOptions {
+  aspect?: Exclude<AspectPreset, "custom">;
+  fit?: RenderFit;
+}
 
 export interface RenderPlan {
   inputs: string[];
@@ -12,23 +20,50 @@ export interface RenderPlan {
   args: string[];
 }
 
-export function buildRenderPlan(project: Project): RenderPlan {
-  if (project.tracks.video.length === 0) {
-    throw new Error("Video track is empty; add clips before render");
+function specFor(project: Project, opts: RenderOptions): ProjectSpec {
+  if (opts.aspect) {
+    const preset = ASPECT_PRESETS[opts.aspect];
+    return { ...preset, aspect: opts.aspect };
+  }
+  return project.spec;
+}
+
+function scaleChain(width: number, height: number, fps: number, fit: RenderFit): string {
+  if (fit === "cover") {
+    return `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},fps=${fps},format=yuv420p`;
+  }
+  return (
+    `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+    `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black,fps=${fps},format=yuv420p`
+  );
+}
+
+function outputName(project: Project, opts: RenderOptions): string {
+  const bits = [`rev-${String(project.revision).padStart(4, "0")}`];
+  if (opts.aspect) bits.push(opts.aspect.replace(":", "x"));
+  if (opts.fit && opts.fit !== "contain") bits.push(opts.fit);
+  return `${bits.join("-")}.mp4`;
+}
+
+export function buildRenderPlan(project: Project, opts: RenderOptions = {}): RenderPlan {
+  const mains = project.tracks.video.filter((item) => !isPip(item));
+  const pips = project.tracks.video.filter(isPip);
+  if (mains.length === 0) {
+    throw new Error("Video track needs at least one full-frame clip before render");
   }
 
-  const { width, height, fps } = project.spec;
+  const spec = specFor(project, opts);
+  const { width, height, fps } = spec;
+  const fit = opts.fit ?? "contain";
   const inputs: string[] = [];
   const parts: string[] = [];
 
-  project.tracks.video.forEach((item, i) => {
+  mains.forEach((item, i) => {
     const clip = findClip(project, item.clipId);
     inputs.push(mediaAbsPath(project, clip.relPath));
     const dur = clipDuration(item);
     parts.push(
-      `[${i}:v]trim=start=${item.in}:end=${item.out},setpts=PTS-STARTPTS,` +
-        `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black,fps=${fps},format=yuv420p[v${i}]`
+      `[${i}:v]trim=start=${item.in}:end=${item.out},setpts=PTS-STARTPTS,${scaleChain(width, height, fps, fit)}[v${i}]`
     );
     if (clip.hasAudio === false) {
       parts.push(
@@ -43,31 +78,48 @@ export function buildRenderPlan(project: Project): RenderPlan {
     }
   });
 
-  const concatIn = project.tracks.video.map((_, i) => `[v${i}][a${i}]`).join("");
-  parts.push(`${concatIn}concat=n=${project.tracks.video.length}:v=1:a=1[outv][outa]`);
+  const concatIn = mains.map((_, i) => `[v${i}][a${i}]`).join("");
+  parts.push(`${concatIn}concat=n=${mains.length}:v=1:a=1[outv][outa]`);
 
   let videoLabel = "outv";
+  const pipStartIndex = mains.length;
+  pips.forEach((item, i) => {
+    const clip = findClip(project, item.clipId);
+    inputs.push(mediaAbsPath(project, clip.relPath));
+    const inputIndex = pipStartIndex + i;
+    const dur = clipDuration(item);
+    const pipW = Math.round(width * 0.32);
+    parts.push(
+      `[${inputIndex}:v]trim=start=${item.in}:end=${item.out},setpts=PTS-STARTPTS,` +
+        `scale=${pipW}:-2[p${i}]`
+    );
+    const dest = `ov${i}`;
+    parts.push(
+      `[${videoLabel}][p${i}]overlay=W-w-48:H-h-48:enable='between(t,${item.start},${item.start + dur})'[${dest}]`
+    );
+    videoLabel = dest;
+  });
+
   if (project.tracks.text.length > 0) {
     const font = resolveFontFile();
     project.tracks.text.forEach((item, i) => {
-      const src = i === 0 ? "outv" : `tx${i - 1}`;
+      const src = i === 0 ? videoLabel : `tx${i - 1}`;
       const dest = i === project.tracks.text.length - 1 ? "vout" : `tx${i}`;
       parts.push(`[${src}]${drawtextFilter(item, font)}[${dest}]`);
     });
     videoLabel = "vout";
   }
 
-  const videoInputCount = project.tracks.video.length;
+  const audioStartIndex = mains.length + pips.length;
   project.tracks.audio.forEach((item) => {
-    const clip = findClip(project, item.clipId);
-    inputs.push(mediaAbsPath(project, clip.relPath));
+    inputs.push(mediaAbsPath(project, findClip(project, item.clipId).relPath));
   });
 
   let audioLabel = "outa";
   if (project.tracks.audio.length > 0) {
     const mixParts = ["[outa]"];
     project.tracks.audio.forEach((item, i) => {
-      const inputIndex = videoInputCount + i;
+      const inputIndex = audioStartIndex + i;
       const dur = audioDuration(item);
       const fadeIn = item.fadeIn ?? 0;
       const fadeOut = item.fadeOut ?? 0;
@@ -91,18 +143,12 @@ export function buildRenderPlan(project: Project): RenderPlan {
     audioLabel = "aout";
   }
 
-  const filter = parts.join(";");
-  const output = path.join(
-    projectDir(project.id),
-    "renders",
-    `rev-${String(project.revision).padStart(4, "0")}.mp4`
-  );
-
+  const output = path.join(projectDir(project.id), "renders", outputName(project, opts));
   const args = ["-y"];
   for (const input of inputs) args.push("-i", input);
   args.push(
     "-filter_complex",
-    filter,
+    parts.join(";"),
     "-map",
     `[${videoLabel}]`,
     "-map",
@@ -124,5 +170,5 @@ export function buildRenderPlan(project: Project): RenderPlan {
     output
   );
 
-  return { inputs, filter, output, args };
+  return { inputs, filter: parts.join(";"), output, args };
 }

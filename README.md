@@ -2,8 +2,8 @@
 
 Agent 可调用的 MCP 视频剪辑工具。Agent 不写 FFmpeg 命令，只读写一份声明式时间线（`project.json`），再预览、导出。
 
-当前实现：**Phase 3（可测）** — 剪辑、导出、烧录字幕、混合 BGM。  
-尚未实现：画中画、水印、Whisper。见 [docs/PLAN.md](docs/PLAN.md)。
+当前实现：**Phase 4（可测）** — 剪辑、字幕、PIP、水印位置、cover 裁切、多比例导出。  
+尚未实现：Whisper。见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 你在测什么
 

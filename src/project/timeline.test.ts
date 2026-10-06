@@ -73,6 +73,16 @@ describe("timeline", () => {
     assert.throws(() => applyOperations(project, [{ op: "trim_video", itemId: project.tracks.video[0].id, in: 0, out: 99 }]));
     assert.throws(() => applyOperations(project, [{ op: "reorder_video", itemIds: ["nope"] }]));
   });
+
+  it("keeps pip off the packed duration", () => {
+    const project = applyOperations(sample(), [
+      { op: "add_video", clipId: "clip_a", in: 0, out: 3 },
+      { op: "add_video", clipId: "clip_a", in: 0, out: 1, layout: "pip", start: 1 }
+    ]);
+    assert.equal(timelineDuration(project), 3);
+    const pip = project.tracks.video.find((item) => item.layout === "pip");
+    assert.equal(pip?.start, 1);
+  });
 });
 
 describe("describe", () => {

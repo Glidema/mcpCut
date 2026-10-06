@@ -33,18 +33,28 @@ export function escapeDrawtext(value: string): string {
 }
 
 const STYLE = {
-  title: { fontsize: 72, y: "h*0.10" },
-  subtitle: { fontsize: 48, y: "h*0.18" },
-  caption: { fontsize: 36, y: "h-th-120" }
+  title: { fontsize: 72, y: "h*0.10", x: "(w-text_w)/2" },
+  subtitle: { fontsize: 48, y: "h*0.18", x: "(w-text_w)/2" },
+  caption: { fontsize: 36, y: "h-th-120", x: "(w-text_w)/2" }
 } as const;
 
+function xy(item: TextItem): { x: string; y: string; fontsize: number } {
+  const base = STYLE[item.style];
+  if (item.position === "top-right") {
+    return { x: "w-text_w-48", y: "48", fontsize: item.style === "title" ? 42 : 28 };
+  }
+  if (item.position === "top") return { x: base.x, y: "80", fontsize: base.fontsize };
+  if (item.position === "bottom") return { x: base.x, y: "h-th-80", fontsize: base.fontsize };
+  return { x: base.x, y: base.y, fontsize: base.fontsize };
+}
+
 export function drawtextFilter(item: TextItem, fontfile: string): string {
-  const style = STYLE[item.style];
+  const pos = xy(item);
   const font = escapeDrawtext(fontfile);
   const text = escapeDrawtext(item.text);
   return (
-    `drawtext=fontfile='${font}':text='${text}':fontsize=${style.fontsize}:` +
-    `fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=${style.y}:` +
+    `drawtext=fontfile='${font}':text='${text}':fontsize=${pos.fontsize}:` +
+    `fontcolor=white:borderw=3:bordercolor=black:x=${pos.x}:y=${pos.y}:` +
     `enable='between(t,${item.start},${item.end})'`
   );
 }

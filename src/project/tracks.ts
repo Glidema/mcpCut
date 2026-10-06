@@ -15,7 +15,8 @@ export function applyOverlayOps(project: Project, operations: OverlayOp[]): Proj
         start: op.start,
         end: op.end,
         text: op.text,
-        style: op.style ?? "caption"
+        style: op.style ?? "caption",
+        position: op.position
       });
     } else if (op.op === "update_text") {
       const idx = text.findIndex((item) => item.id === op.itemId);

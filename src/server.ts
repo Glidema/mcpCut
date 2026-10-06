@@ -27,7 +27,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut version and the tools this process actually registered. If version is not 0.3.1, reload Cursor MCP. New tool names need a new Agent chat after reload.",
+        "Report mcpCut version and registered tools. If version is not 0.4.0 / phase 4, reload MCP (mcpcut3) and start a new Agent chat.",
       inputSchema: z.object({})
     },
     async () => {
@@ -161,7 +161,7 @@ export function createServer(): McpServer {
     "edit_timeline",
     {
       description:
-        "Apply ordered video-track operations: add_video, trim_video, remove_item, reorder_video. Clips are packed end-to-end with no gaps. Does not render. in/out are source seconds.",
+        "Apply video-track operations: add_video, trim_video, remove_item, reorder_video. Full clips pack end-to-end. add_video with layout=pip overlays a picture-in-picture (needs start on the timeline). in/out are source seconds. Does not render.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         operations: z.array(timelineOpSchema).min(1)
@@ -256,14 +256,16 @@ export function createServer(): McpServer {
     "render",
     {
       description:
-        "Start an async FFmpeg export of the current video track to MP4 (scaled/padded to project spec). Returns jobId immediately. Poll get_job until status is done or error. Does not modify the source file. Empty timeline is an error.",
+        "Start an async MP4 export. Optional aspect (9:16/16:9/1:1) exports another frame size without changing the project. Optional fit=cover center-crops; contain letterboxes. Returns jobId. Poll get_job. Does not modify the source file.",
       inputSchema: z.object({
-        projectId: z.string().min(1)
+        projectId: z.string().min(1),
+        aspect: z.enum(["9:16", "16:9", "1:1"]).optional(),
+        fit: z.enum(["contain", "cover"]).optional()
       })
     },
-    async ({ projectId }) => {
+    async ({ projectId, aspect, fit }) => {
       try {
-        const job = await submitRender(projectId);
+        const job = await submitRender(projectId, { aspect, fit });
         return ok(`Render job ${job.id} ${job.status}`, {
           jobId: job.id,
           status: job.status,
@@ -323,21 +325,36 @@ export function createServer(): McpServer {
     "add_overlay",
     {
       description:
-        "Burn a text overlay onto the timeline (title, subtitle, or caption). Times are timeline seconds. One overlay per call. Does not render; call render afterwards.",
+        "Burn text onto the timeline. Times are timeline seconds. position=top-right is a corner watermark. Pass removeItemId to delete an overlay instead. Does not render.",
       inputSchema: z.object({
         projectId: z.string().min(1),
-        text: z.string().min(1).max(200).describe("Overlay copy"),
-        start: z.number().nonnegative().describe("Timeline start seconds"),
-        end: z.number().positive().describe("Timeline end seconds"),
-        style: z.enum(["title", "subtitle", "caption"]).optional()
+        text: z.string().min(1).max(200).optional(),
+        start: z.number().nonnegative().optional(),
+        end: z.number().positive().optional(),
+        style: z.enum(["title", "subtitle", "caption"]).optional(),
+        position: z.enum(["center", "top", "bottom", "top-right"]).optional(),
+        removeItemId: z.string().optional()
       })
     },
-    async ({ projectId, text, start, end, style }) => {
+    async ({ projectId, text, start, end, style, position, removeItemId }) => {
       try {
         const project = await loadProject(projectId);
-        const saved = await saveProject(
-          applyOverlayOps(project, [{ op: "add_text", text, start, end, style }])
-        );
+        if (!removeItemId && (text == null || start == null || end == null)) {
+          throw new Error("text, start, and end are required unless removeItemId is set");
+        }
+        const ops = removeItemId
+          ? [{ op: "remove_overlay" as const, itemId: removeItemId }]
+          : [
+              {
+                op: "add_text" as const,
+                text: text ?? "",
+                start: start ?? 0,
+                end: end ?? 0,
+                style,
+                position
+              }
+            ];
+        const saved = await saveProject(applyOverlayOps(project, ops));
         return ok(describeProject(saved), {
           projectId: saved.id,
           revision: saved.revision,

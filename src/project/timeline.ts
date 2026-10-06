@@ -6,17 +6,23 @@ export function clipDuration(item: Pick<VideoItem, "in" | "out">): number {
   return Math.max(0, item.out - item.in);
 }
 
+export function isPip(item: Pick<VideoItem, "layout">): boolean {
+  return item.layout === "pip";
+}
+
 export function packVideo(items: VideoItem[]): VideoItem[] {
   let t = 0;
   return items.map((item) => {
-    const packed = { ...item, start: t };
+    if (isPip(item)) return item;
+    const next = { ...item, start: t };
     t += clipDuration(item);
-    return packed;
+    return next;
   });
 }
 
 export function timelineDuration(project: Project): number {
-  const last = project.tracks.video.at(-1);
+  const main = project.tracks.video.filter((item) => !isPip(item));
+  const last = main.at(-1);
   if (!last) return 0;
   return last.start + clipDuration(last);
 }
@@ -61,7 +67,8 @@ export function applyOperations(project: Project, operations: TimelineOp[]): Pro
         clipId: clip.id,
         in: inPoint,
         out: outPoint,
-        start: 0
+        start: op.layout === "pip" ? (op.start ?? 0) : 0,
+        layout: op.layout ?? "full"
       });
     } else if (op.op === "trim_video") {
       const idx = video.findIndex((item) => item.id === op.itemId);

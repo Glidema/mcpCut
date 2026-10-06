@@ -1,11 +1,12 @@
 {
   "mcpServers": {
     "mcpcut": {
-      "command": "npx",
+      "command": "/usr/local/bin/node",
       "args": [
-        "tsx",
+        "/Users/maxiaoge/Documents/github/software/mcpCut/node_modules/tsx/dist/cli.mjs",
         "/Users/maxiaoge/Documents/github/software/mcpCut/src/index.ts"
       ],
+      "cwd": "/Users/maxiaoge/Documents/github/software/mcpCut",
       "env": {
         "MCPCUT_ROOT": "/Users/maxiaoge/Documents/github/software/mcpCut/.mcpcut"
       }

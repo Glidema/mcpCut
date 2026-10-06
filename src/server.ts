@@ -26,7 +26,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut phase, workspace root, and whether ffmpeg/ffprobe are available. Call this before inspect or preview.",
+        "Report mcpCut phase, workspace root, ffmpeg/ffprobe, and the full tool list. After a code change, if version is not 0.2.0 or phase is not 2, reload the MCP server.",
       inputSchema: z.object({})
     },
     async () => {

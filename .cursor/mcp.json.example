@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "mcpcut": {
-      "command": "npx",
-      "args": ["tsx", "REPLACE_WITH_ABS_PATH/mcpCut/src/index.ts"],
+      "command": "node",
+      "args": [
+        "REPLACE_WITH_ABS_PATH/mcpCut/node_modules/tsx/dist/cli.mjs",
+        "REPLACE_WITH_ABS_PATH/mcpCut/src/index.ts"
+      ],
+      "cwd": "REPLACE_WITH_ABS_PATH/mcpCut",
       "env": {
         "MCPCUT_ROOT": "REPLACE_WITH_ABS_PATH/mcpCut/.mcpcut"
       }

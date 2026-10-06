@@ -63,9 +63,31 @@ export async function saveProject(project: Project): Promise<Project> {
   return next;
 }
 
+export async function restoreVersion(projectId: string, revision: number): Promise<Project> {
+  const current = await loadProject(projectId);
+  const snapFile = path.join(
+    projectDir(projectId),
+    "versions",
+    `rev-${String(revision).padStart(4, "0")}.json`
+  );
+  if (!(await pathExists(snapFile))) {
+    throw new Error(`No snapshot rev ${revision} for ${projectId}`);
+  }
+  const snap = projectSchema.parse(JSON.parse(await readFile(snapFile, "utf8")));
+  const next: Project = {
+    ...snap,
+    id: current.id,
+    revision: current.revision + 1,
+    updatedAt: nowIso()
+  };
+  await persist(next);
+  return next;
+}
+
 async function persist(project: Project): Promise<void> {
   const dir = projectDir(project.id);
   await ensureDir(dir);
+  await ensureDir(path.join(dir, "versions"));
   const json = JSON.stringify(project, null, 2);
   await writeFile(projectFile(project.id), json, "utf8");
   const rev = String(project.revision).padStart(4, "0");

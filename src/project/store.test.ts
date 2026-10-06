@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { createProject, loadProject, saveProject } from "./store.js";
+import { createProject, loadProject, restoreVersion, saveProject } from "./store.js";
 
 describe("store", () => {
   let tmp = "";
@@ -29,5 +29,18 @@ describe("store", () => {
     assert.equal(loaded.name, "Test Cut");
     const saved = await saveProject(loaded);
     assert.equal(saved.revision, 2);
+  });
+
+  it("restores an old snapshot as a new revision", async () => {
+    const created = await createProject("Restore Me", "9:16");
+    created.name = "after";
+    const saved = await saveProject(created);
+    assert.equal(saved.name, "after");
+    const restored = await restoreVersion(saved.id, 1);
+    assert.equal(restored.name, "Restore Me");
+    assert.equal(restored.revision, 3);
+    const loaded = await loadProject(saved.id);
+    assert.equal(loaded.revision, 3);
+    assert.equal(loaded.name, "Restore Me");
   });
 });

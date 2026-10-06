@@ -1,68 +1,47 @@
 # 一起测试
 
-每期只跑对应清单。当前样片：`vivi/mcbb.MP4`（已 gitignore，不入库）。
+每期只跑对应清单。样片：`vivi/mcbb.MP4`（不入库）。
 
-有两条测法：**脚本冒烟**（先确认引擎）和 **Cursor 里让 Agent 调 MCP**（真正目标）。
-
-## 0. 环境
+## 环境
 
 ```bash
-node -v          # >= 20
 npm test
 npm run typecheck
-```
-
-本机可以没有系统 FFmpeg：mcpCut 会用依赖里的 `ffmpeg-static` / `ffprobe-static`。
-
-## 1. 先跑脚本冒烟（不经过 Cursor）
-
-```bash
 npm run smoke:phase1 -- vivi/mcbb.MP4
 ```
 
-期望：打印 inspect 结果 → 建工程 → 两段 0–3s 与 5–8s → trim / reorder / 两张预览 JPEG → 删一段。结尾 `OK <projectId>`。
+工程目录：`.mcpcut/projects/`。原片 `vivi/mcbb.MP4` 不会被改写。
 
-工程在 `.mcpcut/projects/`。
+## Phase 1（已通过）
 
-## 2. Cursor 里测 MCP（主路径）
+Agent 调 MCP：inspect → create → import → 两段 0–3s / 5–8s → trim → reorder → preview → remove。产物是 `project.json`、`media/` 副本、`previews/*.jpg`。
 
-1. 项目已写 `.cursor/mcp.json`。打开 Cursor Settings → MCP，确认 **mcpcut** 为已连接，工具列表有 7 个。
-2. 若未出现：Reload Window，或把该 JSON 贴进用户级 MCP 配置。
-3. **新开一个 Agent 对话**（不要用普通 Chat 除非已开 MCP），把下面整段发出去。
+## Phase 2（当前）
 
----
+脚本：
 
-请只用 mcpcut 的 MCP 工具，不要自己跑 ffmpeg。素材路径：
+```bash
+npm run smoke:phase2 -- mcbb-agent-e109c692df40
+```
 
-`/Users/maxiaoge/Documents/github/software/mcpCut/vivi/mcbb.MP4`
+Cursor：Reload MCP 后新开对话：
 
-1. `get_status`
-2. `inspect_media` 看这段视频
-3. `create_project` name=`mcbb-agent` aspect=`9:16`
-4. `import_clip`
-5. `edit_timeline` 加两段：0–3 秒、5–8 秒
-6. `describe_project`（应约 6 秒、两段）
-7. 把第一段 `trim_video` 成 0–1.5 秒
-8. `reorder_video` 交换两段
-9. `preview_project`（maxFrames=2），根据关键帧描述画面
-10. `remove_item` 删掉当前第一段，再 `describe_project`
+```
+请只用 mcpcut MCP。工程 mcbb-agent-e109c692df40：
+1. describe_project
+2. 若只剩 1.5s 一段，restore_version 回到两段版（rev 5）
+3. render
+4. 轮询 get_job 直到 done
+5. 给出成片路径；不要改 vivi/mcbb.MP4
+```
 
-每一步把工具返回的摘要贴出来。失败也原样报错。
-
----
-
-## 预期失败（也要测）
-
-- 不存在的路径 inspect
-- `out <= in` 的 trim
-- 空工程 preview
-- `reorder_video` 漏 id
+期望：`renders/rev-XXXX.mp4` 可播放，时长约 4.5s（恢复到两段后）或 1.5s（不恢复）。`vivi/mcbb.MP4` 仍是约 60s。
 
 ## 反馈格式
 
 ```
-步骤: 7 trim
-期望: revision+1，时长变短
+步骤: render
+期望: get_job done，renders 下有 mp4
 实际: ...
 阻塞?: 是/否
 ```

@@ -8,8 +8,10 @@ import { formatProbe, probeMedia } from "./engine/ffprobe.js";
 import { engineStatus } from "./engine/status.js";
 import { describeProject } from "./project/describe.js";
 import { timelineOpSchema } from "./project/schema.js";
-import { copyIntoMedia, createProject, loadProject, saveProject } from "./project/store.js";
+import { copyIntoMedia, createProject, loadProject, restoreVersion, saveProject } from "./project/store.js";
 import { applyOperations } from "./project/timeline.js";
+import { submitRender } from "./jobs/runner.js";
+import { loadJob } from "./jobs/store.js";
 import { nowIso, shortId } from "./util/ids.js";
 import { fail, ok } from "./tools/respond.js";
 import { pathExists } from "./util/fs.js";
@@ -43,7 +45,10 @@ export function createServer(): McpServer {
             "import_clip",
             "edit_timeline",
             "preview_project",
-            "describe_project"
+            "describe_project",
+            "render",
+            "get_job",
+            "restore_version"
           ]
         });
       } catch (err) {
@@ -238,6 +243,73 @@ export function createServer(): McpServer {
           });
         }
         return { content };
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "render",
+    {
+      description:
+        "Start an async FFmpeg export of the current video track to MP4 (scaled/padded to project spec). Returns jobId immediately. Poll get_job until status is done or error. Does not modify the source file. Empty timeline is an error.",
+      inputSchema: z.object({
+        projectId: z.string().min(1)
+      })
+    },
+    async ({ projectId }) => {
+      try {
+        const job = await submitRender(projectId);
+        return ok(`Render job ${job.id} ${job.status}`, {
+          jobId: job.id,
+          status: job.status,
+          projectId: job.projectId
+        });
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_job",
+    {
+      description:
+        "Poll a render job. status is queued, running, done, or error. When done, outputPath is the exported MP4.",
+      inputSchema: z.object({
+        jobId: z.string().min(1)
+      })
+    },
+    async ({ jobId }) => {
+      try {
+        const job = await loadJob(jobId);
+        return ok(`Job ${job.id} ${job.status}`, { ...job });
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "restore_version",
+    {
+      description:
+        "Restore project.json from versions/rev-NNNN.json. Writes a new revision so history is kept. Use describe_project revision numbers.",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        revision: z.number().int().positive()
+      })
+    },
+    async ({ projectId, revision }) => {
+      try {
+        const project = await restoreVersion(projectId, revision);
+        return ok(describeProject(project), {
+          projectId: project.id,
+          revision: project.revision,
+          restoredFrom: revision,
+          video: project.tracks.video
+        });
       } catch (err) {
         return fail(err);
       }

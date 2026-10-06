@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PHASE = 1;
+export const PHASE = 2;
 export const PACKAGE_VERSION = "0.1.0";
 
 const require = createRequire(import.meta.url);

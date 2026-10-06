@@ -73,13 +73,37 @@
 
 短文本：画幅、素材数、段数、每段 in/out/时长、总时长。附一份不含巨大字段的 JSON。
 
+## Phase 2（已注册）
+
+### render
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `projectId` | 是 | |
+
+立刻返回 `{ jobId, status }`。不改原片。空时间线报错。
+
+### get_job
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `jobId` | 是 | |
+
+`queued` / `running` / `done` / `error`。成功时 `outputPath` 为成片 mp4。
+
+### restore_version
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `projectId` | 是 | |
+| `revision` | 是 | 已有快照号，如 3 |
+
+恢复后 revision +1，旧快照保留。
+
 ## 以后才注册
 
 | 工具 | 期 |
 | --- | --- |
-| `restore_version` | 2 |
-| `render` | 2 |
-| `get_job` | 2 |
 | `add_overlay` / 字幕 | 3 |
 | `mix_audio` | 3 |
 

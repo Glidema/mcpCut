@@ -2,8 +2,8 @@
 
 Agent 可调用的 MCP 视频剪辑工具。Agent 不写 FFmpeg 命令，只读写一份声明式时间线（`project.json`），再预览、导出。
 
-当前实现：**Phase 1（可测）** — 建工程、探测素材、导入、裁切/拼接、关键帧预览、工程摘要。  
-尚未实现：异步成片、字幕烧录、BGM、画中画。见 [docs/PLAN.md](docs/PLAN.md)。
+当前实现：**Phase 2（可测）** — Phase 1 剪辑 + 异步导出 mp4、版本回滚。  
+尚未实现：字幕烧录、BGM、画中画。见 [docs/PLAN.md](docs/PLAN.md)。
 
 ## 你在测什么
 
@@ -15,6 +15,8 @@ Agent 可调用的 MCP 视频剪辑工具。Agent 不写 FFmpeg 命令，只读�
 4. `edit_timeline` 裁两刀、改顺序
 5. `preview_project` 抽出关键帧
 6. `describe_project` 用短摘要确认时间线
+7. `render` + `get_job` 导出成片（原片不会被改）
+8. 需要时 `restore_version`
 
 ## 依赖
 

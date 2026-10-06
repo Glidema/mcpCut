@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcpcut": {
+      "command": "npx",
+      "args": ["tsx", "REPLACE_WITH_ABS_PATH/mcpCut/src/index.ts"],
+      "env": {
+        "MCPCUT_ROOT": "REPLACE_WITH_ABS_PATH/mcpCut/.mcpcut"
+      }
+    }
+  }
+}

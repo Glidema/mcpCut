@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.mcpcut/
+*.log
+.DS_Store
+coverage/
+.env
+.env.*
+vivi/
+vendor/
+*.MP4
+*.mp4
+*.mov
+*.MOV

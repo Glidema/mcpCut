@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mcpcut": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "/Users/maxiaoge/Documents/github/software/mcpCut/src/index.ts"
+      ],
+      "env": {
+        "MCPCUT_ROOT": "/Users/maxiaoge/Documents/github/software/mcpCut/.mcpcut"
+      }
+    }
+  }
+}

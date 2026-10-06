@@ -40,6 +40,7 @@ export async function createProject(name: string, aspect: AspectPreset = "9:16")
   await ensureDir(path.join(projectDir(id), "versions"));
   await ensureDir(path.join(projectDir(id), "previews"));
   await ensureDir(path.join(projectDir(id), "renders"));
+  await ensureDir(path.join(projectDir(id), "transcripts"));
   await persist(project);
   return project;
 }

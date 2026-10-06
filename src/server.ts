@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { PACKAGE_VERSION, PHASE, resolveRoot } from "./config.js";
+import { PACKAGE_VERSION, PHASE, resolveRoot, whisperModel } from "./config.js";
 import { previewProject as extractPreview } from "./engine/preview.js";
 import { formatProbe, probeMedia } from "./engine/ffprobe.js";
 import { engineStatus } from "./engine/status.js";
@@ -11,7 +11,7 @@ import { timelineOpSchema } from "./project/schema.js";
 import { copyIntoMedia, createProject, loadProject, restoreVersion, saveProject } from "./project/store.js";
 import { applyOperations } from "./project/timeline.js";
 import { applyAudioOps, applyOverlayOps } from "./project/tracks.js";
-import { submitRender } from "./jobs/runner.js";
+import { submitRender, submitTranscribe } from "./jobs/runner.js";
 import { loadJob } from "./jobs/store.js";
 import { nowIso, shortId } from "./util/ids.js";
 import { fail, ok } from "./tools/respond.js";
@@ -27,7 +27,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut version and registered tools. If version is not 0.4.0 / phase 4, reload MCP (mcpcut3) and start a new Agent chat.",
+        "Report mcpCut version and registered tools. If version is not 0.5.0 / phase 5, reload MCP (mcpcut3) and start a new Agent chat.",
       inputSchema: z.object({})
     },
     async () => {
@@ -39,6 +39,8 @@ export function createServer(): McpServer {
           root: resolveRoot(),
           ffmpeg: bins.ffmpeg,
           ffprobe: bins.ffprobe,
+          whisper: bins.whisper,
+          whisperModel: whisperModel(),
           implementedTools: [
             "get_status",
             "create_project",
@@ -51,7 +53,8 @@ export function createServer(): McpServer {
             "get_job",
             "restore_version",
             "add_overlay",
-            "mix_audio"
+            "mix_audio",
+            "transcribe"
           ]
         });
       } catch (err) {
@@ -281,7 +284,7 @@ export function createServer(): McpServer {
     "get_job",
     {
       description:
-        "Poll a render job. status is queued, running, done, or error. When done, outputPath is the exported MP4.",
+        "Poll a render or transcribe job. status is queued, running, done, or error. Render done: outputPath is mp4. Transcribe done: outputPath is sidecar SRT (does not change the timeline).",
       inputSchema: z.object({
         jobId: z.string().min(1)
       })
@@ -390,6 +393,36 @@ export function createServer(): McpServer {
           projectId: saved.id,
           revision: saved.revision,
           audio: saved.tracks.audio
+        });
+      } catch (err) {
+        return fail(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "transcribe",
+    {
+      description:
+        "Async speech-to-text of the current video track (not PIP). Writes a sidecar SRT under transcripts/; does not add overlays or change project.json. Poll get_job. Whisper must be available (python3 -m whisper).",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        language: z
+          .string()
+          .min(2)
+          .max(32)
+          .optional()
+          .describe("Whisper language, e.g. Chinese or zh. Omit to auto-detect.")
+      })
+    },
+    async ({ projectId, language }) => {
+      try {
+        const job = await submitTranscribe(projectId, language);
+        return ok(`Transcribe job ${job.id} ${job.status}`, {
+          jobId: job.id,
+          status: job.status,
+          projectId: job.projectId,
+          kind: job.kind
         });
       } catch (err) {
         return fail(err);

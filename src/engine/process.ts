@@ -14,12 +14,12 @@ export class CommandError extends Error {
 export async function runCommand(
   command: string,
   args: string[],
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; env?: NodeJS.ProcessEnv } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   const timeoutMs = opts.timeoutMs ?? 60_000;
 
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], env: opts.env });
     let stdout = "";
     let stderr = "";
     const timer = setTimeout(() => {

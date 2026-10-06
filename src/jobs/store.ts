@@ -4,12 +4,14 @@ import { resolveRoot } from "../config.js";
 import { ensureDir, pathExists } from "../util/fs.js";
 import { nowIso, shortId } from "../util/ids.js";
 import type { RenderOptions } from "../engine/render.js";
+import type { CaptionCue } from "../engine/srt.js";
 
 export type JobStatus = "queued" | "running" | "done" | "error";
+export type JobKind = "render" | "transcribe";
 
 export interface Job {
   id: string;
-  kind: "render";
+  kind: JobKind;
   projectId: string;
   status: JobStatus;
   createdAt: string;
@@ -17,6 +19,9 @@ export interface Job {
   outputPath?: string;
   error?: string;
   render?: RenderOptions;
+  language?: string;
+  summary?: string;
+  cues?: CaptionCue[];
 }
 
 function jobsDir(): string {
@@ -27,15 +32,19 @@ export function jobFile(jobId: string): string {
   return path.join(jobsDir(), `${jobId}.json`);
 }
 
-export async function createJob(projectId: string, render?: RenderOptions): Promise<Job> {
+export async function createJob(
+  projectId: string,
+  init: { kind?: JobKind; render?: RenderOptions; language?: string } = {}
+): Promise<Job> {
   const job: Job = {
     id: shortId("job"),
-    kind: "render",
+    kind: init.kind ?? "render",
     projectId,
     status: "queued",
     createdAt: nowIso(),
     updatedAt: nowIso(),
-    render
+    render: init.render,
+    language: init.language
   };
   await writeJob(job);
   return job;

@@ -44,13 +44,13 @@
 操作：
 
 ```json
-{ "op": "add_video", "clipId": "clip_...", "in": 0, "out": 3.5 }
+{ "op": "add_video", "clipId": "clip_...", "in": 0, "out": 3.5, "layout": "pip", "start": 2 }
 { "op": "trim_video", "itemId": "v_...", "in": 1.2, "out": 4.0 }
 { "op": "remove_item", "itemId": "v_..." }
 { "op": "reorder_video", "itemIds": ["v_a", "v_b"] }
 ```
 
-`add_video` 省略 `in`/`out` 时用整段素材时长。`reorder_video` 的 `itemIds` 必须是当前视频轨的全排列。
+`add_video` 省略 `in`/`out` 时用整段素材时长。`layout=pip` 时用 `start` 作为画中画入点（秒）。`reorder_video` 的 `itemIds` 必须是当前视频轨的全排列。
 
 返回新 revision 与 `describe` 摘要。
 
@@ -80,8 +80,10 @@
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
 | `projectId` | 是 | |
+| `aspect` | 否 | `9:16` / `16:9` / `1:1`，覆盖工程画幅 |
+| `fit` | 否 | `contain` 留边 / `cover` 裁满 |
 
-立刻返回 `{ jobId, status }`。不改原片。空时间线报错。
+立刻返回 `{ jobId, status }`。不改原片。空时间线报错。成片名可带 `16x9-cover` 等后缀。
 
 ### get_job
 
@@ -110,6 +112,8 @@
 | `text` | 是 | 最多 200 字 |
 | `start` / `end` | 是 | 时间线秒 |
 | `style` | 否 | `title` \| `subtitle` \| `caption`，默认 caption |
+| `position` | 否 | `top-right` 等，角标水印 |
+| `removeItemId` | 否 | 传入则只删该 `t_*`，忽略 text |
 
 ### mix_audio
 
@@ -120,11 +124,19 @@
 | `volume` | 否 | 默认 0.25 |
 | `fadeIn` / `fadeOut` / `start` | 否 | |
 
+### transcribe
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `projectId` | 是 | |
+| `language` | 否 | 如 `Chinese`；省略则自动检测 |
+
+立刻返回 `{ jobId }`。`get_job` 成功时 `outputPath` 为 sidecar SRT。不改 `project.json`。需要 `python3 -m whisper`（或 `WHISPER_BIN`），默认模型 `small`（`WHISPER_MODEL`）。
+
 ## 以后才注册
 
 | 工具 | 期 |
 | --- | --- |
-| 画中画 / 水印 | 4 |
-| Whisper 自动字幕 | 5 |
+| 场景探测 | 以后 |
 
 未实现的工具 **不注册**，避免模型调用到占位符。

@@ -3,8 +3,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PHASE = 4;
-export const PACKAGE_VERSION = "0.4.0";
+export const PHASE = 5;
+export const PACKAGE_VERSION = "0.5.0";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
@@ -62,4 +62,34 @@ export function ffprobePath(): string {
     bundledFfprobe() ||
     "ffprobe"
   );
+}
+
+export function pythonPath(): string {
+  return process.env.PYTHON_PATH?.trim() || process.env.PYTHON?.trim() || "python3";
+}
+
+/** openai-whisper CLI, or `python3 -m whisper` when unset. */
+export function whisperArgs(): { command: string; prefix: string[] } {
+  const bin = process.env.WHISPER_BIN?.trim();
+  if (bin) return { command: bin, prefix: [] };
+  return { command: pythonPath(), prefix: ["-m", "whisper"] };
+}
+
+export function whisperModel(): string {
+  return process.env.WHISPER_MODEL?.trim() || "small";
+}
+
+/** openai-whisper shells out to `ffmpeg` by name; Cursor MCP PATH often has none. */
+export function pathWithFfmpegDir(ffmpegBin: string, pathEnv: string): string {
+  if (!path.isAbsolute(ffmpegBin)) return pathEnv;
+  const dir = path.dirname(ffmpegBin);
+  const parts = pathEnv.split(path.delimiter).filter(Boolean);
+  if (parts.includes(dir)) return parts.join(path.delimiter);
+  return [dir, ...parts].join(path.delimiter);
+}
+
+export function ensureFfmpegOnPath(): string {
+  const next = pathWithFfmpegDir(ffmpegPath(), process.env.PATH ?? "");
+  process.env.PATH = next;
+  return next;
 }

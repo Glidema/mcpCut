@@ -99,6 +99,8 @@ export function applyOperations(project: Project, operations: TimelineOp[]): Pro
         next.push(item);
       }
       video = next;
+    } else if (op.op === "cut_highlights") {
+      throw new Error("cut_highlights must be expanded before applyOperations");
     }
   }
 

@@ -2,7 +2,7 @@
 
 给 **AI Agent** 用的本地视频剪辑器。你在 Cursor 里用自然语言说「把 20–26 秒和倒计时切在一起、加个水印、出一条 16:9」，Agent 调 MCP 工具完成；**你不会碰到时间线 UI，Agent 也不会手写 FFmpeg 命令**。
 
-当前版本：**0.6.0（Phase 6 已联调）** — 剪辑、字幕、BGM、画中画、多比例导出、语音转写、场景硬切点。原片只读复制，导出走后台任务。
+当前版本：**0.7.1（Phase 7）** — 剪辑、字幕、BGM、画中画、多比例、Whisper、场景切点、精彩段自动切割。原片只读复制，导出走后台任务。
 
 ---
 
@@ -38,6 +38,7 @@ Premiere / 剪映 / CapCut 是给人点的。`ffmpeg` 封装、脚本、n8n 工�
 - 异步导出 9:16 / 16:9 / 1:1，contain 留边或 cover 裁满
 - 版本回滚（`restore_version`）
 - Whisper 旁路出 SRT（口播少会标明，避免把片头水印当成整段台词）
+- **精彩段自动切割**：口播按说话段去掉长静音；对白太少则按场景镜头合并后切上时间线（`edit_timeline` → `cut_highlights`）
 
 工具名刻意很少。Cursor 会缓存 MCP 目录，**能加参数就不要新工具**。完整参数见 [docs/TOOLS.md](docs/TOOLS.md)。
 
@@ -94,9 +95,11 @@ npm run typecheck
 }
 ```
 
+Whisper 默认模型是 `small`。若要换本机用的型号，在 `env` 里加 `"WHISPER_MODEL": "medium"`（代码默认不变）。
+
 Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时按对话缓存工具列表）。
 
-让 Agent 先调用 `get_status`。应看到版本 **0.6.0**、phase **6**、`ffmpeg: true`。对不上就 Reload + 新对话。
+让 Agent 先调用 `get_status`。应看到版本 **0.7.1**、phase **7**、`ffmpeg: true`。`whisperModel` 应是你配置的值。对不上就 Reload + 新对话。
 
 ### 3. 准备一条本地视频
 
@@ -135,7 +138,7 @@ Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时�
 - **先 preview 再 render。** 编码慢；两张切点帧往往比空转一次出片更能发现「剪错段了」。
 - **原片只读。** 所有破坏性操作都发生在 `.mcpcut/projects/...`。源 MP4 应始终不变。
 - **智能结果要人（或 Agent）确认。** 场景切点在 MV 上会很碎（0.3 阈值下几十刀都正常）；Whisper 在纯配乐上可能只听出片头「字幕by某某」。用切点当建议，再用 `edit_timeline` 下手。
-- **口播片用转写，快切片用 scenes。** `preview_project at=scenes` 抽的是硬切附近，不是每段中点。
+- **口播先 cut_highlights，再 preview。** `strategy=hybrid`：说话够多就切气口；MV/B-roll 会退回场景镜头。想先看刀再下手：`apply=false`。切错了 `restore_version`。
 - **改了 MCP 工具或参数就要 Reload。** 只剪同一工程、不升级服务时，不必反复重启。
 - **画幅用 `render` 的 `aspect` / `fit`，不必改建工程。** 同一时间线可出竖屏 contain 和横屏 cover。
 - **字幕叠了就删。** `add_overlay` 传 `removeItemId`，不要再叠一条。

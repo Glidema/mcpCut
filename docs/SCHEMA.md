@@ -56,6 +56,8 @@ Phase 1 只记录 spec，预览抽帧不强制缩放。
 
 轨时长 = 最后一项 `start + (out - in)`。不允许重叠或空隙（Phase 1）。
 
+`edit_timeline` 的 `cut_highlights` 不写入 schema 新字段，只替换 `tracks.video` 主轨项。
+
 ## tracks.text[]
 
 | 字段 | 说明 |

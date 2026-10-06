@@ -50,9 +50,12 @@
 { "op": "trim_video", "itemId": "v_...", "in": 1.2, "out": 4.0 }
 { "op": "remove_item", "itemId": "v_..." }
 { "op": "reorder_video", "itemIds": ["v_a", "v_b"] }
+{ "op": "cut_highlights", "strategy": "hybrid", "scope": "clip", "minSec": 1.2, "maxClips": 12 }
 ```
 
 `add_video` 省略 `in`/`out` 时用整段素材时长。`layout=pip` 时用 `start` 作为画中画入点（秒）。`reorder_video` 的 `itemIds` 必须是当前视频轨的全排列。
+
+`cut_highlights` 必须单独一条：口播用静音反转得到说话段，配乐/B-roll 口播太少则退回合并后的场景镜头，然后替换主轨（PIP 保留）。`scope=clip` 分析整段源；`selection` 只分析当前 in/out。`apply=false` 只出计划不改时间线。写旁路 `highlights/rev-XXXX.json`。
 
 返回新 revision 与 `describe` 摘要。
 

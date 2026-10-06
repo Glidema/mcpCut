@@ -27,6 +27,7 @@ MCP tools  →  project store (JSON + versions)  →  timeline math
       renders/        # phase 2
       transcripts/    # phase 5 sidecar SRT
       scenes/         # phase 6 sidecar JSON
+      highlights/     # phase 7 sidecar JSON
 ```
 
 素材导入时 **复制** 进 `media/`，时间线只引用工程内相对路径。这样工程可搬、Agent 也不会死盯用户桌面的原路径。
@@ -54,6 +55,8 @@ Phase 1 只有一条视频轨，片段按数组顺序 **无缝拼接**。每项�
 
 - 任何可能超过数秒的编码：**render / transcribe** → `{ jobId }` → `get_job`
 - Whisper 只写 `transcripts/*.srt`，不进时间线引擎
+- 场景切点写 `scenes/`；精彩段计划写 `highlights/`。真正改轨只通过 `edit_timeline`
+- `cut_highlights` 先跑 silencedetect / scene，再展开成 remove+add，时间线计算本身仍不拼 FFmpeg
 - Phase 1 的 `preview_project` 抽帧通常很快，保持同步；单次最多抽 12 张，超时要失败而不是挂死
 
 ## 二进制

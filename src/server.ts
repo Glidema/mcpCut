@@ -1,14 +1,15 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { PACKAGE_VERSION, PHASE, resolveRoot, whisperModel } from "./config.js";
 import { previewProject as extractPreview } from "./engine/preview.js";
 import { formatProbe, probeMedia } from "./engine/ffprobe.js";
+import { highlightPlanToOps, planHighlights } from "./engine/highlights.js";
 import { detectScenes, formatSceneReport } from "./engine/scenes.js";
 import { engineStatus } from "./engine/status.js";
 import { describeProject } from "./project/describe.js";
-import { timelineOpSchema } from "./project/schema.js";
+import { timelineOpSchema, type TimelineOp } from "./project/schema.js";
 import { copyIntoMedia, createProject, loadProject, projectDir, restoreVersion, saveProject } from "./project/store.js";
 import { applyOperations } from "./project/timeline.js";
 import { applyAudioOps, applyOverlayOps } from "./project/tracks.js";
@@ -16,7 +17,7 @@ import { submitRender, submitTranscribe } from "./jobs/runner.js";
 import { loadJob } from "./jobs/store.js";
 import { nowIso, shortId } from "./util/ids.js";
 import { fail, ok } from "./tools/respond.js";
-import { pathExists } from "./util/fs.js";
+import { ensureDir, pathExists } from "./util/fs.js";
 
 export function createServer(): McpServer {
   const server = new McpServer({
@@ -28,7 +29,7 @@ export function createServer(): McpServer {
     "get_status",
     {
       description:
-        "Report mcpCut version and registered tools. If version is not 0.6.0 / phase 6, reload MCP (mcpcut3) and start a new Agent chat.",
+        "Report mcpCut version and registered tools. If version is not 0.7.1 / phase 7, reload MCP (mcpcut3) and start a new Agent chat.",
       inputSchema: z.object({})
     },
     async () => {
@@ -189,7 +190,7 @@ export function createServer(): McpServer {
     "edit_timeline",
     {
       description:
-        "Apply video-track operations: add_video, trim_video, remove_item, reorder_video. Full clips pack end-to-end. add_video with layout=pip overlays a picture-in-picture (needs start on the timeline). in/out are source seconds. Does not render.",
+        "Apply video-track operations: add_video, trim_video, remove_item, reorder_video, cut_highlights. cut_highlights analyzes speech (talking-head) or scene shots (MV), then replaces full-frame clips; PIP is kept. Must be the only op. apply=false returns the plan without editing. in/out are source seconds. Does not render.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         operations: z.array(timelineOpSchema).min(1)
@@ -198,6 +199,46 @@ export function createServer(): McpServer {
     async ({ projectId, operations }) => {
       try {
         const project = await loadProject(projectId);
+        const highlightOps = operations.filter((op) => op.op === "cut_highlights");
+        if (highlightOps.length > 1) {
+          throw new Error("Only one cut_highlights operation is allowed");
+        }
+        if (highlightOps.length === 1) {
+          if (operations.length !== 1) {
+            throw new Error("cut_highlights must be the only item in operations");
+          }
+          const spec = highlightOps[0];
+          const plan = await planHighlights(project, spec);
+          const dir = path.join(projectDir(project.id), "highlights");
+          await ensureDir(dir);
+          const apply = spec.apply !== false;
+          if (!apply) {
+            const sidecar = path.join(dir, `rev-${String(project.revision).padStart(4, "0")}-plan.json`);
+            await writeFile(sidecar, JSON.stringify(plan, null, 2), "utf8");
+            return ok(
+              `${plan.note}\n${plan.clips.length} clip(s), keep ${plan.keepSec.toFixed(2)}s of ${plan.windowSec.toFixed(2)}s. apply=false; timeline unchanged.`,
+              {
+                projectId: project.id,
+                revision: project.revision,
+                applied: false,
+                sidecar,
+                plan
+              }
+            );
+          }
+          const edited = applyOperations(project, highlightPlanToOps(project, plan) as TimelineOp[]);
+          const saved = await saveProject(edited);
+          const sidecar = path.join(dir, `rev-${String(saved.revision).padStart(4, "0")}.json`);
+          await writeFile(sidecar, JSON.stringify(plan, null, 2), "utf8");
+          return ok(`${plan.note}\n${describeProject(saved)}`, {
+            projectId: saved.id,
+            revision: saved.revision,
+            applied: true,
+            sidecar,
+            plan,
+            video: saved.tracks.video
+          });
+        }
         const edited = applyOperations(project, operations);
         const saved = await saveProject(edited);
         const summary = describeProject(saved);
@@ -230,6 +271,8 @@ export function createServer(): McpServer {
         if (await pathExists(srt)) notes.push(`Sidecar transcript ${srt}`);
         const sceneFile = path.join(projectDir(project.id), "scenes", `rev-${rev}.json`);
         if (await pathExists(sceneFile)) notes.push(`Sidecar scenes ${sceneFile}`);
+        const hiFile = path.join(projectDir(project.id), "highlights", `rev-${rev}.json`);
+        if (await pathExists(hiFile)) notes.push(`Sidecar highlights ${hiFile}`);
         return ok(describeProject(project, notes), {
           projectId: project.id,
           revision: project.revision,

@@ -93,11 +93,21 @@ export const reorderVideoOpSchema = z.object({
   itemIds: z.array(z.string()).min(1)
 });
 
+export const cutHighlightsOpSchema = z.object({
+  op: z.literal("cut_highlights"),
+  strategy: z.enum(["hybrid", "speech", "scenes"]).optional(),
+  scope: z.enum(["clip", "selection"]).optional(),
+  minSec: z.number().positive().optional(),
+  maxClips: z.number().int().min(1).max(24).optional(),
+  apply: z.boolean().optional()
+});
+
 export const timelineOpSchema = z.discriminatedUnion("op", [
   addVideoOpSchema,
   trimVideoOpSchema,
   removeItemOpSchema,
-  reorderVideoOpSchema
+  reorderVideoOpSchema,
+  cutHighlightsOpSchema
 ]);
 
 export type TimelineOp = z.infer<typeof timelineOpSchema>;

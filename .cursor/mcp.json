@@ -8,7 +8,8 @@
       ],
       "cwd": "/Users/maxiaoge/Documents/github/software/mcpCut",
       "env": {
-        "MCPCUT_ROOT": "/Users/maxiaoge/Documents/github/software/mcpCut/.mcpcut"
+        "MCPCUT_ROOT": "/Users/maxiaoge/Documents/github/software/mcpCut/.mcpcut",
+        "WHISPER_MODEL": "medium"
       }
     }
   }

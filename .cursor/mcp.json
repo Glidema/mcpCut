@@ -11,6 +11,18 @@
         "MCPCUT_ROOT": "/Users/maxiaoge/Documents/github/software/mcpCut/mcpcut-data",
         "WHISPER_MODEL": "medium"
       }
+    },
+    "mcp-webcam": {
+      "command": "/usr/local/bin/node",
+      "args": [
+        "/Users/maxiaoge/Documents/github/software/mcpCut/mcp-webcam/dist/server.js"
+      ],
+      "cwd": "/Users/maxiaoge/Documents/github/software/mcpCut/mcp-webcam",
+      "env": {
+        "PORT": "3333",
+        "MCP_WEBCAM_RECORDINGS": "/Users/maxiaoge/Documents/github/software/mcpCut/mcp-webcam/recordings",
+        "FFMPEG_PATH": "/Users/maxiaoge/Documents/github/software/mcpCut/node_modules/ffmpeg-static/ffmpeg"
+      }
     }
   }
 }

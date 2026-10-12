@@ -4,6 +4,8 @@
 
 当前版本：**0.7.2（Phase 7）** — 剪辑、字幕、BGM、画中画、多比例、Whisper、场景切点、精彩段自动切割。原片只读复制，导出走后台任务。
 
+同仓库还带独立的摄像头录制 MCP（[mcp-webcam](mcp-webcam/README.md)）：**开摄像头页 → 指挥 Agent → 录制落盘 → 再用本剪辑器出片**。
+
 ---
 
 ## 这和过去的剪辑工具有什么不同
@@ -73,9 +75,19 @@ npm test
 npm run typecheck
 ```
 
+若要用摄像头现场录再剪，还需要构建旁边的录制 MCP：
+
+```bash
+cd mcp-webcam
+npm install
+npm run build
+```
+
+说明见 [mcp-webcam/README.md](mcp-webcam/README.md)。
+
 ### 2. 接到 Cursor
 
-把 [`.cursor/mcp.json.example`](.cursor/mcp.json.example) 里的路径改成你的绝对路径，放到 Cursor 的 MCP 配置里。本仓库联调时服务名是 **mcpcut3**（改过工具后若目录不更新，换个名字可避开缓存）。
+把 [`.cursor/mcp.json.example`](.cursor/mcp.json.example) 里的路径改成你的绝对路径，放到 Cursor 的 MCP 配置里。本仓库联调时剪辑服务名是 **mcpcut3**（改过工具后若目录不更新，换个名字可避开缓存）。可同时启用 **mcp-webcam**（录制）。
 
 ```json
 {
@@ -90,6 +102,15 @@ npm run typecheck
       "env": {
         "MCPCUT_ROOT": "/ABS/PATH/mcpCut/mcpcut-data"
       }
+    },
+    "mcp-webcam": {
+      "command": "node",
+      "args": ["/ABS/PATH/mcpCut/mcp-webcam/dist/server.js"],
+      "cwd": "/ABS/PATH/mcpCut/mcp-webcam",
+      "env": {
+        "PORT": "3333",
+        "MCP_WEBCAM_RECORDINGS": "/ABS/PATH/mcpCut/mcp-webcam/recordings"
+      }
     }
   }
 }
@@ -99,11 +120,24 @@ Whisper 默认模型是 `small`。若要换本机用的型号，在 `env` 里加
 
 Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时按对话缓存工具列表）。
 
-让 Agent 先调用 `get_status`。应看到版本 **0.7.2**、phase **7**、`ffmpeg: true`。`whisperModel` 应是你配置的值。对不上就 Reload + 新对话。
+让 Agent 先调用 `get_status`。应看到版本 **0.7.2**、phase **7**、`ffmpeg: true`。`whisperModel` 应是你配置的值。对不上就 Reload + 新对话。使用录制时确认 **mcp-webcam 为绿色**。
 
-### 3. 准备一条本地视频
+### 3. 准备素材：本地文件，或摄像头现录
 
+**方式 A — 已有本地视频**  
 只要本机文件，不要 URL。例如 `vivi/mcbb.MP4`。Agent **不得改原片**；导入后用的是工程里的副本。
+
+**方式 B — 摄像头录一段再剪（推荐和 Agent 配合）**
+
+```
+开摄像头页 → 指挥 Agent → mcp-webcam 录制落盘 → mcpcut3 导入并剪辑
+```
+
+1. 浏览器打开 `http://localhost:3333`，选好摄像头并允许权限（「MCP 会话」应显示已连接）
+2. 对 Agent 说：录一段 / 停下 / 拿去剪辑
+3. Agent 用 `start_recording` → `stop_recording` 得到路径，再 `import_clip` 进入剪辑
+
+详细步骤与常见问题见 [mcp-webcam 中文说明](mcp-webcam/README.md)。**不要**再手动起一份占 3333 的服务，也不要同时开用户级旧版 webcam MCP。
 
 ### 4. 对 Agent 可以这样说
 
@@ -122,11 +156,18 @@ Settings → MCP 里点 **Reload**。新开一个 Agent 对话（Cursor 有时�
 8. render，轮询 get_job，告诉我成片路径
 ```
 
+现场录再剪可以说：
+
+```
+我已经打开了 http://localhost:3333。
+用 mcp-webcam 录大约 20 秒，停下来后用 mcpcut3 竖屏剪一版并导出。
+```
+
 成片在：
 
 `mcpcut-data/projects/<projectId>/renders/`
 
-中间版本在 `versions/`，预览图在 `previews/`，转写在 `transcripts/`，切点在 `scenes/`。
+中间版本在 `versions/`，预览图在 `previews/`，转写在 `transcripts/`，切点在 `scenes/`。摄像头原始录像在 `mcp-webcam/recordings/`。
 
 `npm run dev` 是给 MCP 客户端拉起的 stdio 服务，不要当普通命令行交互用。
 
@@ -169,6 +210,7 @@ get_status → inspect_media → create_project → import_clip
 
 | 文档 | 内容 |
 | --- | --- |
+| [mcp-webcam/README.md](mcp-webcam/README.md) | **摄像头录制 MCP**（中文）：功能、教程、技巧、常见问题 |
 | [docs/PLAN.md](docs/PLAN.md) | 已完成分期、以后可以做的切口 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 工程目录、异步边界 |
 | [docs/SCHEMA.md](docs/SCHEMA.md) | `project.json` 字段 |

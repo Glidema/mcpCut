@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "mcpcut": {
+    "mcpcut3": {
       "command": "node",
       "args": [
         "REPLACE_WITH_ABS_PATH/mcpCut/node_modules/tsx/dist/cli.mjs",
@@ -9,6 +9,15 @@
       "cwd": "REPLACE_WITH_ABS_PATH/mcpCut",
       "env": {
         "MCPCUT_ROOT": "REPLACE_WITH_ABS_PATH/mcpCut/mcpcut-data"
+      }
+    },
+    "mcp-webcam": {
+      "command": "node",
+      "args": ["REPLACE_WITH_ABS_PATH/mcpCut/mcp-webcam/dist/server.js"],
+      "cwd": "REPLACE_WITH_ABS_PATH/mcpCut/mcp-webcam",
+      "env": {
+        "PORT": "3333",
+        "MCP_WEBCAM_RECORDINGS": "REPLACE_WITH_ABS_PATH/mcpCut/mcp-webcam/recordings"
       }
     }
   }
